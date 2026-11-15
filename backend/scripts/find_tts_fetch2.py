@@ -1,0 +1,7 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+with open(r'C:\Users\faruk\.gemini\antigravity\scratch\jft-cbt-exam-server\static\index.html', 'r', encoding='utf-8') as f:
+    text = f.read()
+
+pos = text.find('Cannot connect to TTS backend server')
+print(text[pos-3000:pos-1500])

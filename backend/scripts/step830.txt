@@ -1,0 +1,44 @@
+Created At: 2026-11-09T18:39:03+06:00
+Completed At: 2026-11-09T18:39:04+06:00
+Showing lines 705-745 of 772
+705:         raise
+706:     except Exception as e:
+707:         logger.error(f"Error toggling exam visibility: {e}")
+708:         raise HTTPException(status_code=500, detail=str(e))
+709: 
+710: @app.post("/api/exams/submit")
+711: async def submit_exam_result(sub: ExamSubmissionModel):
+712:     """Receives and stores student CBT or Model test submissions across the network."""
+713:     sub_file = os.path.join(DATA_DIR, "student_submissions.json")
+714:     submissions = []
+715:     if os.path.exists(sub_file):
+716:         try:
+717:             with open(sub_file, "r", encoding="utf-8") as f:
+718:                 submissions = json.load(f)
+719:         except Exception:
+720:             submissions = []
+721: 
+722:     record = sub.model_dump() if hasattr(sub, "model_dump") else sub.dict()
+723:     record["submissionId"] = "sub_" + uuid.uuid4().hex[:8]
+724:     if not record.get("date"):
+725:         record["date"] = asyncio.get_event_loop().time()
+726:     submissions.insert(0, record)
+727: 
+728:     with open(sub_file, "w", encoding="utf-8") as f:
+729:         json.dump(submissions, f, ensure_ascii=False, indent=2)
+730: 
+731:     return {"success": True, "submissionId": record["submissionId"]}
+732: 
+733: @app.get("/api/exams/submissions")
+734: async def get_all_submissions():
+735:     """Returns all student submissions for teacher live monitoring."""
+736:     sub_file = os.path.join(DATA_DIR, "student_submissions.json")
+737:     if os.path.exists(sub_file):
+738:         with open(sub_file, "r", encoding="utf-8") as f:
+739:             return json.load(f)
+740:     return []
+741: 
+742: # Mount static folders
+743: app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
+744: app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+745: app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
