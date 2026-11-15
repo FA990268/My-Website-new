@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import { testConnection } from './database/connection.js';
 import authRoutes from './routes/auth.routes.js';
+import ttsRoutes from './routes/tts.routes.js';
+import examRoutes from './routes/exam.routes.js';
+import submissionRoutes from './routes/submission.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,16 +17,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Security & Cross-Origin Configuration
-const allowedOrigins = [env.ADMIN_CLIENT_URL, env.CANDIDATE_CLIENT_URL];
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin, allowed client URLs, localhost, or vercel.app domains
-      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.endsWith('.vercel.app')) {
-        callback(null, true);
-      } else {
-        callback(null, true);
-      }
+      // Allow all origins, client URLs, localhost, or vercel.app domains
+      callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -35,11 +33,15 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
-// Serve static assets from public directory if present
+// Static Files & Asset Delivery
 const publicDir = path.resolve(__dirname, '../public');
 if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir));
 }
+app.use('/assets', express.static(path.resolve(__dirname, '../public/assets')));
+app.use('/assets', express.static(path.resolve(__dirname, '../../assets')));
+app.use('/data', express.static(path.resolve(__dirname, '../../data')));
+app.use('/data', express.static(path.resolve(__dirname, '../data')));
 
 /* -------------------------------------------------------------------------
  * Root & Frontend Delivery Route
@@ -64,13 +66,15 @@ app.get('/', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/api/health',
-      auth: '/api/v1/admin/auth'
+      exams: '/api/exams',
+      tts: '/api/tts/batch-dialogue',
+      submissions: '/api/submissions'
     }
   });
 });
 
 /* -------------------------------------------------------------------------
- * Health & Operational Status Probe
+ * Health & Network Status
  * ------------------------------------------------------------------------- */
 app.get('/api/health', async (req: Request, res: Response) => {
   let dbStatus: { connected: boolean; message: string };
@@ -89,10 +93,22 @@ app.get('/api/health', async (req: Request, res: Response) => {
   });
 });
 
+app.get('/api/network-info', (req: Request, res: Response) => {
+  res.json({
+    status: 'online',
+    lan_ip: 'cloud',
+    host: 'Vercel Edge / Serverless',
+    timestamp: new Date().toISOString(),
+    environment: env.NODE_ENV
+  });
+});
+
 /* -------------------------------------------------------------------------
- * API Routing Topology
+ * API Routing Topology (Full CBT, Exams, Submissions, TTS, & Auth)
  * ------------------------------------------------------------------------- */
-// Administrative Security & Auth Module
+app.use('/api', ttsRoutes);
+app.use('/api', examRoutes);
+app.use('/api', submissionRoutes);
 app.use('/api/v1/admin/auth', authRoutes);
 
 // 404 Fallback for unmatched routes
@@ -105,8 +121,7 @@ app.use((req: Request, res: Response) => {
 });
 
 /* -------------------------------------------------------------------------
- * Server Launch
- * (Only binds to a local port when running as a standalone server, NOT on Vercel)
+ * Standalone Server Launch
  * ------------------------------------------------------------------------- */
 if (!process.env.VERCEL) {
   const server = app.listen(env.PORT, async () => {
@@ -114,35 +129,22 @@ if (!process.env.VERCEL) {
     console.log(` 🏛️  CBT High-Precision Portal - Admin Core & Engine`);
     console.log(` 🌐 Server active at: http://localhost:${env.PORT}`);
     console.log(` 🔒 Environment:     ${env.NODE_ENV}`);
-    console.log(` 🛡️  Argon2id Memory: 64 MiB | OWASP Grade Authentication`);
     console.log(`================================================================`);
 
-    // Verify PostgreSQL Connectivity safely
     try {
       const dbHealth = await testConnection();
       if (dbHealth.connected) {
         console.log(` ✅ PostgreSQL DB:    ${dbHealth.message}`);
       } else {
         console.warn(` ⚠️ PostgreSQL DB:    ${dbHealth.message}`);
-        console.warn(` ℹ️ Note: Start PostgreSQL and run 'npm run db:migrate' to apply schemas.`);
       }
     } catch (e: any) {
       console.warn(` ⚠️ PostgreSQL check skipped: ${e.message}`);
     }
   });
 
-  // Process signal handling
-  const gracefulShutdown = () => {
-    console.log('\n🛑 Initiating graceful server termination...');
-    server.close(() => {
-      console.log('✅ HTTP server closed.');
-      process.exit(0);
-    });
-  };
-
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', () => server.close());
+  process.on('SIGINT', () => server.close());
 }
 
-// Export default app for Vercel Serverless Function invocation
 export default app;

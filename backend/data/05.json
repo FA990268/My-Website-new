@@ -1,0 +1,807 @@
+{
+  "title": "JFT-Basic Model CBT Test 5 (60 Questions - Book 1 All & Book 2 L1-12 - Audio a.mp3 to o.mp3)",
+  "duration": 60,
+  "passMark": 200,
+  "questions": [
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "えを みて、ただしい ことばを ひとつ えらんでください。",
+      "passage": "",
+      "question": "この えの ことばは どれですか。",
+      "options": [
+        "レジぶくろ",
+        "くつした",
+        "てぶくろ",
+        "ぼうし"
+      ],
+      "correct": 1,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_16_4_10_rejibukuro.png"
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "えを みて、ただしい ことばを ひとつ えらんでください。",
+      "passage": "",
+      "question": "この えの ことばは どれですか。",
+      "options": [
+        "ニュース",
+        "アニメ",
+        "スポーツ",
+        "カレンダー"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_1_09_anime.png"
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "えを みて、ただしい ことばを ひとつ えらんでください。",
+      "passage": "",
+      "question": "この へやは どうですか。",
+      "options": [
+        "きれいです",
+        "きたないです",
+        "あたらしいです",
+        "しずかです"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_14_3_12_kitanai.png"
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "えを みて、ただしい ことばを ひとつ えらんでください。",
+      "passage": "",
+      "question": "この えの 人は なにを していますか。",
+      "options": [
+        "おきます",
+        "ねます",
+        "はしります",
+        "あるきます"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_17_1_08_neru.png"
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "えを みて、ただしい ことばを ひとつ えらんでください。",
+      "passage": "",
+      "question": "この おにぎりの なかの たべものは どれですか。",
+      "options": [
+        "たまご",
+        "こんぶ",
+        "とりにく",
+        "チーズ"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_16_3_12_konbu.png"
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "来週の 日曜日は 友だちの 結婚式の（   ）が あるので、サッカーの 試合には 行けません。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "ようじ",
+        "へんじ",
+        "そうじ",
+        "かんじ"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "この かばんは 小さくて とても（   ）ので、毎日 持って 歩くのに 便利です。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "おもい",
+        "かるい",
+        "ながい",
+        "くらい"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "わたしの 国と 日本では、電車の 乗り方や 生活の（   ）が 少し 違います。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "しゅうかん",
+        "としょかん",
+        "たいいくかん",
+        "じかん"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの かんじとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "今月の 末に 大学の 【そつぎょう】パーティーが あります。",
+      "question": "【そつぎょう】 の かんじは どれですか。",
+      "options": [
+        "卒業",
+        "卒行",
+        "率業",
+        "授業"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの かんじとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "わからない ことが あったら、窓口で 【しつもん】して ください。",
+      "question": "【しつもん】 の かんじは どれですか。",
+      "options": [
+        "質門",
+        "質問",
+        "室問",
+        "日間"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの かんじとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "きのうの 夜、大きい 【じしん】が あったので びっくりしました。",
+      "question": "【じしん】 の かんじは どれですか。",
+      "options": [
+        "地振",
+        "自震",
+        "地震",
+        "地信"
+      ],
+      "correct": 3,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの かんじとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "駅の 近くの 【ゆうびんきょく】で 切手を 5枚 買いました。",
+      "question": "【ゆうびんきょく】 の かんじは どれですか。",
+      "options": [
+        "郵便局",
+        "有便局",
+        "郵便屋",
+        "遊便局"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの よみかたとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "来週の 試験に かならず 【合格】したいです。",
+      "question": "【合格】 の よみかたは どれですか。",
+      "options": [
+        "ごうかく",
+        "あいかく",
+        "ごうきゃく",
+        "かかく"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの よみかたとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "京都は 外国人の 客に 人気が ある 【観光地】です。",
+      "question": "【観光地】 の よみかたは どれですか。",
+      "options": [
+        "かんこうち",
+        "けんこうち",
+        "かんこうじ",
+        "しんこうち"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 1: Script and Vocabulary (文字と語彙)",
+      "instruction": "つぎの ことばの よみかたとして いちばん いいものを ひとつ えらんでください。",
+      "passage": "バスに 乗る ときは、つり銭が ないように 小さい お金を 【用意】します。",
+      "question": "【用意】 の よみかたは どれですか。",
+      "options": [
+        "ようい",
+        "ようじ",
+        "ちゅうい",
+        "りよう"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "A: この ケーキは だれ（ 1 ）作りましたか。\nB: 母（ 2 ）誕生日の ために、わたしが 作りました。",
+      "question": "（ 1 ）と（ 2 ）に はいる ことばは どれですか。",
+      "options": [
+        "1: が ／ 2: の",
+        "1: を ／ 2: に",
+        "1: は ／ 2: で",
+        "1: に ／ 2: と"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "A: 休みの 日に よく どこへ 行きますか。\nB: わたしは 静かな 場所が 好きなので、図書館へ 本を（   ）に 行きます。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "借り",
+        "借りる",
+        "借りて",
+        "借りた"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "きのうは 熱が あって 頭も（   ）ので、会社を 休みました。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "痛かった",
+        "痛くて",
+        "痛いで",
+        "痛いと"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "A: もう 12時ですね。お昼ご飯を 食べに 行きませんか。\nB: すみません、この 仕事が（   ）から、行きます。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "終わる",
+        "終わって",
+        "終わった",
+        "終わり"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "夜の 公園は 暗くて（   ）ですから、1人で 歩かない ほうが いいですよ。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "危ない",
+        "危なくて",
+        "危なかった",
+        "危なく"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "A: すみません、ちょっと 窓を（   ）いいですか。\nB: ええ、どうぞ。部屋が 少し 暑いですね。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "開けても",
+        "開けるも",
+        "開けたも",
+        "開けも"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "わたしは 子どもの とき、ピアノを 3年間（   ）ことが あります。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "習った",
+        "習う",
+        "習って",
+        "習い"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "机の 上に りんごが（   ）と、バナナが 2本 あります。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "みっつ",
+        "さんにん",
+        "さんまい",
+        "さんさつ"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "（  ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "日本へ 来た ばかりの とき、隣の 部屋の 人に ゴミの 出し方を（   ）もらいました。",
+      "question": "（  ）に はいる ことばは どれですか。",
+      "options": [
+        "教えて",
+        "教える",
+        "教えた",
+        "教え"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 25 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【病院の受付で】\n受付: おはようございます。今日は どう しましたか。\n患者: きのうの 夜から のどが 痛くて、少し 熱も（ 25 ）。\n受付: そうですか。この 病院は 初めてですか。\n患者: はい、初めてです。\n受付: じゃあ、この 紙に 名前と 住所を 書いて、健康保険証を（ 26 ）。",
+      "question": "（ 25 ）に はいる ことばは どれですか。",
+      "options": [
+        "あるんです",
+        "ないんです",
+        "いたんです",
+        "するんです"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 26 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【病院の受付で】\n受付: おはようございます。今日は どう しましたか。\n患者: きのうの 夜から のどが 痛くて、少し 熱も（ 25 ）。\n受付: そうですか。この 病院は 初めてですか。\n患者: はい、初めてです。\n受付: じゃあ、この 紙に 名前と 住所を 書いて、健康保険証を（ 26 ）。",
+      "question": "（ 26 ）に はいる ことばは どれですか。",
+      "options": [
+        "見せて ください",
+        "見て ください",
+        "飲んで ください",
+        "洗って ください"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 27 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【喫茶店で】\n店員: いらっしゃいませ。ご注文は お決まりですか。\n客: はい、ホットコーヒーと 卵サンドイッチを お願いします。\n店員: かしこまりました。セットに すると サラダか スープが つきますが、（ 27 ）に しますか。\n客: じゃあ、スープを お願いします。\n店員: かしこまりました。ところで、お会計は 750円ですが、先に レジで（ 28 ）。",
+      "question": "（ 27 ）に はいる ことばは どれですか。",
+      "options": [
+        "どちら",
+        "どこ",
+        "だれ",
+        "いつ"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 28 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【喫茶店で】\n店員: いらっしゃいませ。ご注文は お決まりですか。\n客: はい、ホットコーヒーと 卵サンドイッチを お願いします。\n店員: かしこまりました。セットに すると サラダか スープが つきますが、（ 27 ）に しますか。\n客: じゃあ、スープを お願いします。\n店員: かしこまりました。ところで、お会計は 750円ですが、先に レジで（ 28 ）。",
+      "question": "（ 28 ）に はいる ことばは どれですか。",
+      "options": [
+        "払って ください",
+        "作って ください",
+        "乗って ください",
+        "待たないで ください"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 29 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【会社で】\nA: リーさん、来週の 月曜日から 東京へ 出張ですね。ホテルは もう（ 29 ）か。\nB: はい、東京駅の 近くの ビジネスホテルを 予約しました。\nA: そうですか。東京の 支社には わたしの 友だちの 木村さんが いますから、困った ことが あったら 何でも 聞いて くださいね。\nB: ありがとうございます。（ 30 ）。",
+      "question": "（ 29 ）に はいる ことばは どれですか。",
+      "options": [
+        "予約しました",
+        "予約しません",
+        "出発しました",
+        "到着しました"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 2: Conversation and Expression (会話と表現)",
+      "instruction": "つぎの かいわの（ 30 ）に なにを いれますか。いちばん いいものを ひとつ えらんでください。",
+      "passage": "【会社で】\nA: リーさん、来週の 月曜日から 東京へ 出張ですね。ホテルは もう（ 29 ）か。\nB: はい、東京駅の 近くの ビジネスホテルを 予約しました。\nA: そうですか。東京の 支社には わたしの 友だちの 木村さんが いますから、困った ことが あったら 何でも 聞いて くださいね。\nB: ありがとうございます。（ 30 ）。",
+      "question": "（ 30 ）に はいる ことばは どれですか。",
+      "options": [
+        "安心しました",
+        "お大事に",
+        "ごちそうさまでした",
+        "おかえりなさい"
+      ],
+      "correct": 1,
+      "mark": 4
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は これから 何を 手伝いますか。",
+      "options": [
+        "重い 箱を 2階の 事務室へ 持って 行きます",
+        "机の 上の パソコンを 直します",
+        "部屋の 窓を 全部 閉めます",
+        "新しい 紙を 買いに 行きます"
+      ],
+      "correct": 1,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_10_1_09_tetsudau.png",
+      "audio": "a.mp3",
+      "dialogues": [
+        { "id": "a_1", "speaker": "男 (Man)", "text": "佐藤さん、その箱は重そうですね。手伝いましょうか？" },
+        { "id": "a_2", "speaker": "女 (Woman)", "text": "ありがとうございます！中に本がたくさん入っていて重いんです。" },
+        { "id": "a_3", "speaker": "男 (Man)", "text": "どこへ持って行きますか？" },
+        { "id": "a_4", "speaker": "女 (Woman)", "text": "2階の事務室までお願いします。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "箱の 中に 何が ありませんか。",
+      "options": [
+        "はさみ",
+        "赤い ペン",
+        "セロテープ",
+        "のり"
+      ],
+      "correct": 3,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_10_4_02_doogu.png",
+      "audio": "b.mp3",
+      "dialogues": [
+        { "id": "b_1", "speaker": "女 (Woman)", "text": "イベントの準備に使う道具は、全部この箱の中にありますか？" },
+        { "id": "b_2", "speaker": "男 (Man)", "text": "ええと、はさみと、のりと、赤いペンはありますね。あれ、セロテープがありません。" },
+        { "id": "b_3", "speaker": "女 (Woman)", "text": "セロテープは隣の教室にありますから、私が今取ってきますね。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は 毎朝、電車の 中で 何を 聞いて いますか。",
+      "options": [
+        "英語の ニュース",
+        "日本の アニメの 歌",
+        "国の 家族からの メッセージ",
+        "ピアノの 静かな 音楽"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_01_kiku.png",
+      "audio": "c.mp3",
+      "dialogues": [
+        { "id": "c_1", "speaker": "女 (Woman)", "text": "ダニエルさんは、毎朝電車の中で何を聞いているんですか？英語のニュースですか？" },
+        { "id": "c_2", "speaker": "男 (Man)", "text": "いいえ、日本のアニメの歌を聞いていますよ。歌を聞くと、楽しく日本語の言葉が覚えられるんです。" },
+        { "id": "c_3", "speaker": "女 (Woman)", "text": "へえ、それはいい勉強方法ですね！" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おんなの 人は 今、何の 本を 読んで いますか。",
+      "options": [
+        "日本の 歴史の 本",
+        "簡単な 料理の 本",
+        "京都の 旅行ガイドブック",
+        "パソコンの 使い方の 本"
+      ],
+      "correct": 3,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_02_yomu.png",
+      "audio": "d.mp3",
+      "dialogues": [
+        { "id": "d_1", "speaker": "男 (Man)", "text": "熱心に本を読んでいますね。料理の本ですか？" },
+        { "id": "d_2", "speaker": "女 (Woman)", "text": "いいえ、京都の旅行ガイドブックです。来月の連休に友だちと京都へ行くので、有名なお寺やおいしい店を調べているんです。" },
+        { "id": "d_3", "speaker": "男 (Man)", "text": "京都旅行ですか！楽しみですね。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は きのうの 夜、テレビで 何を 見ましたか。",
+      "options": [
+        "サッカーの 試合",
+        "野球の 試合",
+        "日本の 昔の 映画",
+        "世界の 動物の 番組"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_03_miru.png",
+      "audio": "e.mp3",
+      "dialogues": [
+        { "id": "e_1", "speaker": "女 (Woman)", "text": "きのうの夜8時から、テレビでサッカーの試合がありましたね。見ましたか？" },
+        { "id": "e_2", "speaker": "男 (Man)", "text": "いいえ、ぼくは野球のほうが好きなので、別のチャンネルで野球の試合を見ていましたよ。" },
+        { "id": "e_3", "speaker": "女 (Woman)", "text": "そうなんですね。野球も人気がありますよね。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は 毎週 土曜日に どこで バスケットボールを しますか。",
+      "options": [
+        "会社の 近くの 公園",
+        "駅の 前の スポーツクラブ",
+        "学校の 体育館",
+        "市民センターの 広場"
+      ],
+      "correct": 3,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_04_supootsusuru.png",
+      "audio": "f.mp3",
+      "dialogues": [
+        { "id": "f_1", "speaker": "女 (Woman)", "text": "いい汗をかいていますね！毎週土曜日にバスケットボールをしているんですか？" },
+        { "id": "f_2", "speaker": "男 (Man)", "text": "ええ、家の近くの学校の体育館を借りて、地域の仲間と一緒に練習しています。" },
+        { "id": "f_3", "speaker": "女 (Woman)", "text": "学校の体育館なら広くていいですね。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おんなの 人は どうして 朝から 部屋を 掃除して いますか。",
+      "options": [
+        "午後から 国の 両親が 遊びに 来るから",
+        "新しい アパートへ 引っ越すから",
+        "なくした 指輪を 探して いるから",
+        "猫が ジュースを こぼしたから"
+      ],
+      "correct": 1,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_05_soojisuru.png",
+      "audio": "g.mp3",
+      "dialogues": [
+        { "id": "g_1", "speaker": "男 (Man)", "text": "朝から一生けんめい部屋の掃除をしていますね。" },
+        { "id": "g_2", "speaker": "女 (Woman)", "text": "ええ、今日の午後、国から両親が初めて私のアパートに遊びに来るんです。だから、部屋をきれいにしているんですよ。" },
+        { "id": "g_3", "speaker": "男 (Man)", "text": "ご両親が来るんですね！それは楽しみですね。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は 洗濯した 服を どこに 干しますか。",
+      "options": [
+        "外の ベランダ",
+        "部屋の 中の エアコンの 下",
+        "お風呂場の 中",
+        "コインランドリーの 機械"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_06_sentakusuru.png",
+      "audio": "h.mp3",
+      "dialogues": [
+        { "id": "h_1", "speaker": "男 (Man)", "text": "洗濯が終わったよ。外のベランダに干そうか。" },
+        { "id": "h_2", "speaker": "女 (Woman)", "text": "待って！今は晴れているけれど、昼から強い雨が降るそうよ。外に干すと濡れてしまうわ。" },
+        { "id": "h_3", "speaker": "男 (Man)", "text": "そうなんだ。じゃあ、今日は部屋の中のエアコンの下に干しておこう。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は 今晩、何の 料理を 作りますか。",
+      "options": [
+        "牛肉の カレー",
+        "豚肉と キャベツの 野菜いため",
+        "鶏肉の スープ",
+        "焼き魚と みそ汁"
+      ],
+      "correct": 2,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_07_ryoorisuru.png",
+      "audio": "i.mp3",
+      "dialogues": [
+        { "id": "i_1", "speaker": "女 (Woman)", "text": "いいにおいがしますね！今晩のご飯は何を作っているんですか？カレーですか？" },
+        { "id": "i_2", "speaker": "男 (Man)", "text": "いいえ、冷蔵庫に豚肉とキャベツがたくさんあったので、豚肉とキャベツの野菜いためを作っています。" },
+        { "id": "i_3", "speaker": "女 (Woman)", "text": "わあ、おいしそうですね！ご飯がたくさん食べられそうです。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おんなの 人は 仕事から 帰った あと、何をして リラックスしますか。",
+      "options": [
+        "ソファで 温かい ハーブティーを 飲みます",
+        "冷たい アイスクリームを 食べます",
+        "近くの 公園を 30分 走ります",
+        "友だちと 長い 時間 電話で 話します"
+      ],
+      "correct": 1,
+      "mark": 4,
+      "image": "assets/x_illustrations/X_11_3_12_yukkurisuru.png",
+      "audio": "j.mp3",
+      "dialogues": [
+        { "id": "j_1", "speaker": "男 (Man)", "text": "毎日仕事が忙しいですね。夜、家に帰ってからどうやってリラックスしていますか？" },
+        { "id": "j_2", "speaker": "女 (Woman)", "text": "私はお風呂に入ったあと、部屋のソファに座って、いい香りの温かいハーブティーをゆっくり飲みます。そうすると、夜ぐっすり眠れるんですよ。" },
+        { "id": "j_3", "speaker": "男 (Man)", "text": "いいですね。私も今夜やってみます。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "この 新しい アパートの 部屋について、正しい ものは どれですか。",
+      "options": [
+        "南に 大きい 窓が あって、明るくて きれいです",
+        "駅から とても 近いですが、部屋が 暗いです",
+        "古い 建物なので、家賃が 3万円です",
+        "窓が 1つも ありません"
+      ],
+      "correct": 1,
+      "mark": 5,
+      "image": "assets/x_illustrations/X_14_3_11_kiree.png",
+      "audio": "k.mp3",
+      "dialogues": [
+        { "id": "k_1", "speaker": "不動産屋 (Male)", "text": "こちらの2階の部屋はいかがでしょうか。先月できたばかりで、とてもきれいですよ。" },
+        { "id": "k_2", "speaker": "客 (Female)", "text": "わあ、南に大きい窓があって、昼間は電気をつけなくてもすごく明るいですね！" },
+        { "id": "k_3", "speaker": "不動産屋 (Male)", "text": "はい、日当たりがいいので、洗濯物もよく乾きますよ。" },
+        { "id": "k_4", "speaker": "客 (Female)", "text": "とても気に入りました。この部屋にします。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は どの 傘を 買いますか。",
+      "options": [
+        "1,500円の 赤い 傘",
+        "1,000円の 青い 傘",
+        "500円の 黒い 普通の 傘",
+        "500円の 小さい 折りたたみ傘"
+      ],
+      "correct": 3,
+      "mark": 5,
+      "image": "assets/x_illustrations/X_15_4_12_futsuunokasa.png",
+      "audio": "l.mp3",
+      "dialogues": [
+        { "id": "l_1", "speaker": "男 (Man)", "text": "急に雨が降ってきましたね。すみません、安い傘はありますか？" },
+        { "id": "l_2", "speaker": "店員 (Female)", "text": "はい、こちらの赤い傘と青い傘は1,000円で、あちらの黒い普通の傘は500円です。" },
+        { "id": "l_3", "speaker": "男 (Man)", "text": "家に帰るだけですから、安いのでいいです。500円の黒い普通の傘を1本ください。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "きのう 見た 映画は どうでしたか。",
+      "options": [
+        "話が 難しくて、途中で 寝て しまいました",
+        "とても 悲しい 話で、たくさん 泣きました",
+        "おもしろくて、最初から 最後まで 笑いました",
+        "音が 大きすぎて、頭が 痛く なりました"
+      ],
+      "correct": 2,
+      "mark": 5,
+      "image": "assets/x_illustrations/X_17_2_02_eega.png",
+      "audio": "m.mp3",
+      "dialogues": [
+        { "id": "m_1", "speaker": "男 (Man)", "text": "きのう映画館で見た犬の映画、どうでしたか？おもしろかったですか？" },
+        { "id": "m_2", "speaker": "女 (Woman)", "text": "すごくいい映画でしたが、とても悲しい話だったので、最後はお客さんみんながハンカチを出して泣いていました。私もたくさん泣きましたよ。" },
+        { "id": "m_3", "speaker": "男 (Man)", "text": "そうなんですか。私も今度見に行こうかな。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "ふたりは 来月の 旅行で、何に 乗って どこへ 行きますか。",
+      "options": [
+        "新幹線に 乗って、広島へ 行きます",
+        "飛行機に 乗って、北海道へ 行きます",
+        "船に 乗って、四国へ 行きます",
+        "高速バスに 乗って、長野へ 行きます"
+      ],
+      "correct": 2,
+      "mark": 5,
+      "image": "assets/x_illustrations/X_18_1_01_ryokoosuru.png",
+      "audio": "n.mp3",
+      "dialogues": [
+        { "id": "n_1", "speaker": "女 (Woman)", "text": "来月の3連休、どこへ旅行に行きましょうか。新幹線で広島へ行きますか？" },
+        { "id": "n_2", "speaker": "男 (Man)", "text": "広島もいいけれど、今インターネットで見たら、北海道行きの飛行機の切符がすごく安くなっているよ！" },
+        { "id": "n_3", "speaker": "女 (Woman)", "text": "本当？北海道でおいしい魚やラーメンを食べたいわ！じゃあ、飛行機を予約して北海道へ行きましょう。" }
+      ]
+    },
+    {
+      "section": "Section 3: Listening Comprehension (聴解)",
+      "instruction": "えを みながら おんせいを きいて、しつもんに こたえてください。",
+      "passage": "",
+      "question": "おとこの 人は 雪の 旅行で 何が いちばん 楽しかったと 言って いますか。",
+      "options": [
+        "スキーを した こと",
+        "友だちと 大きい 雪だるまを 作った こと",
+        "ホテルの 部屋で ゲームを した こと",
+        "雪の 写真を 撮った こと"
+      ],
+      "correct": 2,
+      "mark": 5,
+      "image": "assets/x_illustrations/X_18_2_07_yuki.png",
+      "audio": "o.mp3",
+      "dialogues": [
+        { "id": "o_1", "speaker": "女 (Woman)", "text": "冬の北国への旅行、どうでしたか？スキーをしましたか？" },
+        { "id": "o_2", "speaker": "男 (Man)", "text": "ぼくはスキーができないので、ホテルの前の広場で友だちと一緒に大きい雪だるまを作りました。初めての経験で、それが一番楽しかったです！" },
+        { "id": "o_3", "speaker": "女 (Woman)", "text": "わあ、楽しそうですね！" }
+      ]
+    },
+    {
+      "section": "Section 4: Reading Comprehension (読解)",
+      "instruction": "つぎの おしらせを よんで、しつもんに こたえてください。",
+      "passage": "【みどり市民プール 夏休みの お知らせ】\n7月 20日から 8月 31日まで、外の 大きい プールを 開きます。\n・時間：午前 9:30 ～ 午後 5:00\n・料金：大人 400円、小・中学生 150円\n※1時間に 10分間、休憩時間が あります。休憩時間には 全員 プールから 出なければ なりません。また、プールサイドを 走ると 危ないので、絶対に 走らないで ください。",
+      "question": "この プールの 使い方に ついて、正しい ものは どれですか。",
+      "options": [
+        "休憩時間も プールの中で 泳ぐ ことが できます。",
+        "1時間に 10分間、プールから 出て 休まなければ なりません。",
+        "中学生は 大人と同じ 400円を 払います。",
+        "急いで いる ときは プールサイドを 走っても いいです。"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 4: Reading Comprehension (読解)",
+      "instruction": "つぎの メールを よんで、しつもんに こたえてください。",
+      "passage": "件名：パソコンの 修理について\n総務課の 渡辺さん\nお疲れ様です、営業部の ナムです。今朝から わたしの 机の パソコンが 急に 動かなく なって しまいました。電源の ボタンを押しても 画面が 暗いままです。今日の 午後の 会議で 使う 資料が 中に 入って いるので、とても 困って います。午前中に 一度 見て もらえませんか。\nナム",
+      "question": "ナムさんは どうして 渡辺さんに メールを 書きましたか。",
+      "options": [
+        "新しい 机と いすを 買って ほしいからです。",
+        "壊れた パソコンを 午前中に 見て ほしいからです。",
+        "今日の 午後の 会議を 休みたいからです。",
+        "渡辺さんの パソコンを 1週間 借りたいからです。"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 4: Reading Comprehension (読解)",
+      "instruction": "つぎの ぶんしょうを よんで、しつもんに こたえてください。",
+      "passage": "日本の スーパーでは、夜の 8時ごろに なると、お弁当や お寿司、天ぷらなどの 値段が 安く なります。次の 日まで 売る ことが できない 食べ物を、20%から 50%ぐらい 安く して 売るからです。わたしは 仕事が 遅く 終わった 日は、スーパーで 安く なった お弁当を 買って 帰ります。",
+      "question": "どうして 夜の 8時ごろに スーパーの お弁当が 安く なりますか。",
+      "options": [
+        "昼の お弁当より 量が 少ないからです。",
+        "次の 日まで 売る ことが できないからです。",
+        "味が 悪くて だれも 買わないからです。",
+        "夜の 8時に 新しい お弁当を 作るからです。"
+      ],
+      "correct": 2,
+      "mark": 4
+    },
+    {
+      "section": "Section 4: Reading Comprehension (読解)",
+      "instruction": "つぎの ぶんしょうを よんで、しつもんに こたえてください。",
+      "passage": "きのう、家族で 動物園へ 行きました。父と 母は 最初に パンダを 見に 行きました。パンダの ところは 人が 多かったので、兄は ひとりで 鳥の コーナーへ 行って 写真を 撮りました。わたしと 妹は 動物に えさを あげる 体験を してから、お土産屋で うさぎの 人形を 買いました。",
+      "question": "ぶんしょうの ないようと あっている ものは どれですか。",
+      "options": [
+        "兄は 父と 一緒に パンダの 写真を 撮りました。",
+        "母は お土産屋で うさぎの 人形を 買いました。",
+        "「わたし」と 妹は 動物に えさを あげました。",
+        "パンダの ところは 人が 少なくて 静かでした。"
+      ],
+      "correct": 3,
+      "mark": 4
+    },
+    {
+      "section": "Section 4: Reading Comprehension (読解)",
+      "instruction": "つぎの おしらせを よんで、しつもんに こたえてください。",
+      "passage": "【国際交流 バス旅行の ご案内】\n外国人住民と 日本人が 一緒に

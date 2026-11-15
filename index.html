@@ -2745,10 +2745,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
-                if(!data.success) throw new Error(data.detail || "Synthesis error");
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok || !data.success) {
+                    let errMsg = "Synthesis error";
+                    if(typeof data.detail === 'string') errMsg = data.detail;
+                    else if(Array.isArray(data.detail)) errMsg = data.detail.map(d => d.msg).join(', ');
+                    else if(data.message) errMsg = data.message;
+                    throw new Error(errMsg);
+                }
 
-                synthesizedScripts = data.scripts;
+                synthesizedScripts = data.scripts || [];
 
                 // Update master players on each script card
                 synthesizedScripts.forEach(s => {
