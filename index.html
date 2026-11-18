@@ -1421,19 +1421,22 @@
                 url = url.substring(url.lastIndexOf('/') + 1);
             }
 
-            const fileName = url.substring(url.lastIndexOf('/') + 1);
-            if(fileName.startsWith('X_') && !url.includes('Illustrations')) {
-                url = `assets/X_Illustrations/${fileName}`;
-            } else if(fileName.startsWith('Y_') && !url.includes('Illustrations')) {
-                url = `assets/Y_Illustrations/${fileName}`;
-            } else if((fileName.startsWith('Z_') || fileName.startsWith('ZZ_')) && !url.includes('Illustrations')) {
+            const fileName = url.substring(url.lastIndexOf('/') + 1).trim();
+            if(fileName.startsWith('ZZ_')) {
+                url = `assets/ZZ_Illustrations/${fileName}`;
+            } else if(fileName.startsWith('Z_')) {
                 url = `assets/Z_Illustrations/${fileName}`;
+            } else if(fileName.startsWith('Y_')) {
+                url = `assets/Y_Illustrations/${fileName}`;
+            } else if(fileName.startsWith('X_')) {
+                url = `assets/X_Illustrations/${fileName}`;
             }
 
             // Case-sensitivity fix for Linux / Vercel
             url = url.replace(/assets\/x_illustrations\//i, 'assets/X_Illustrations/');
             url = url.replace(/assets\/y_illustrations\//i, 'assets/Y_Illustrations/');
             url = url.replace(/assets\/z_illustrations\//i, 'assets/Z_Illustrations/');
+            url = url.replace(/assets\/zz_illustrations\//i, 'assets/ZZ_Illustrations/');
 
             if(url.startsWith('/')) url = url.substring(1);
             return url;
@@ -3320,20 +3323,33 @@
                 imgEl.setAttribute('data-original', q.image);
                 imgEl.setAttribute('data-attempt', '0');
                 imgEl.onerror = function() {
-                    const cur = imgEl.getAttribute('data-attempt') || '0';
+                    const cur = parseInt(imgEl.getAttribute('data-attempt') || '0', 10);
                     const original = imgEl.getAttribute('data-original') || '';
                     const fn = (original.split(/[\\/]/).pop() || '').trim();
-                    if(cur === '0' && fn) {
+                    if(!fn) return;
+
+                    const getFolder = (name) => {
+                        if(name.startsWith('ZZ_')) return 'ZZ_Illustrations';
+                        if(name.startsWith('Z_')) return 'Z_Illustrations';
+                        if(name.startsWith('Y_')) return 'Y_Illustrations';
+                        if(name.startsWith('X_')) return 'X_Illustrations';
+                        return '';
+                    };
+                    const folder = getFolder(fn);
+
+                    if(cur === 0) {
                         imgEl.setAttribute('data-attempt', '1');
-                        if(fn.startsWith('X_')) imgEl.src = `assets/X_Illustrations/${fn}`;
-                        else if(fn.startsWith('Y_')) imgEl.src = `assets/Y_Illustrations/${fn}`;
-                        else if(fn.startsWith('Z_')) imgEl.src = `assets/Z_Illustrations/${fn}`;
-                        else imgEl.src = `assets/${fn}`;
-                    } else if(cur === '1' && fn) {
+                        imgEl.src = folder ? `assets/${folder}/${fn}` : `assets/${fn}`;
+                    } else if(cur === 1) {
                         imgEl.setAttribute('data-attempt', '2');
-                        if(fn.startsWith('X_')) imgEl.src = `backend/public/assets/X_Illustrations/${fn}`;
-                        else if(fn.startsWith('Y_')) imgEl.src = `backend/public/assets/Y_Illustrations/${fn}`;
-                        else if(fn.startsWith('Z_')) imgEl.src = `backend/public/assets/Z_Illustrations/${fn}`;
+                        imgEl.src = folder ? `backend/public/assets/${folder}/${fn}` : `backend/public/assets/${fn}`;
+                    } else if(cur === 2) {
+                        imgEl.setAttribute('data-attempt', '3');
+                        imgEl.src = folder ? `Jft Test/assets/${folder}/${fn}` : `Jft Test/assets/${fn}`;
+                    } else if(cur === 3) {
+                        imgEl.setAttribute('data-attempt', '4');
+                        const cdn = 'https://my-website-new-fhe2.vercel.app';
+                        imgEl.src = folder ? `${cdn}/assets/${folder}/${fn}` : `${cdn}/assets/${fn}`;
                     } else {
                         imgEl.onerror = null;
                     }
