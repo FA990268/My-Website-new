@@ -1392,8 +1392,8 @@
     <script>
         // Global State & API Configuration
         const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
-            ? ''
-            : 'http://localhost:8000';
+            ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : window.location.origin)
+            : 'https://my-website-new-fhe2.vercel.app';
 
         function resolveAudioUrl(rawUrl) {
             if(!rawUrl || typeof rawUrl !== 'string') return '';
@@ -1416,7 +1416,6 @@
 
             // 3. Dedicated audio folder routes (/audio/...)
             if(url.startsWith('/audio/') || url.startsWith('audio/')) {
-                // If single letter stock prompt in /audio/ (e.g. /audio/a.mp3), map to assets/A.mp3
                 if(/^[a-iA-I]\.mp3$/i.test(fn)) {
                     return `assets/${fn.toUpperCase()}`;
                 }
@@ -1446,36 +1445,21 @@
             // Normalize backslashes
             url = url.replace(/\\/g, '/');
 
-            // Strip local disk paths
-            if(url.includes('/backend/public/assets/')) {
-                url = 'assets/' + url.split('/backend/public/assets/')[1];
-            } else if(url.includes('/backend/public/')) {
-                url = url.split('/backend/public/')[1];
-            } else if(url.includes('/assets/')) {
-                url = 'assets/' + url.split('/assets/')[1];
-            } else if(url.includes(':/')) {
-                url = url.substring(url.lastIndexOf('/') + 1);
-            }
-
+            // Extract file name
             const fileName = url.substring(url.lastIndexOf('/') + 1).trim();
-            if(fileName.startsWith('ZZ_')) {
-                url = `assets/ZZ_Illustrations/${fileName}`;
-            } else if(fileName.startsWith('Z_')) {
-                url = `assets/Z_Illustrations/${fileName}`;
-            } else if(fileName.startsWith('Y_')) {
-                url = `assets/Y_Illustrations/${fileName}`;
-            } else if(fileName.startsWith('X_')) {
-                url = `assets/X_Illustrations/${fileName}`;
+            if(!fileName) return '';
+
+            // Map prefix to illustration folder if matching
+            let folder = '';
+            if(fileName.startsWith('ZZ_')) folder = 'ZZ_Illustrations';
+            else if(fileName.startsWith('Z_')) folder = 'Z_Illustrations';
+            else if(fileName.startsWith('Y_')) folder = 'Y_Illustrations';
+            else if(fileName.startsWith('X_')) folder = 'X_Illustrations';
+
+            if(folder) {
+                return `assets/${folder}/${fileName}`;
             }
-
-            // Case-sensitivity fix for Linux / Vercel
-            url = url.replace(/assets\/x_illustrations\//i, 'assets/X_Illustrations/');
-            url = url.replace(/assets\/y_illustrations\//i, 'assets/Y_Illustrations/');
-            url = url.replace(/assets\/z_illustrations\//i, 'assets/Z_Illustrations/');
-            url = url.replace(/assets\/zz_illustrations\//i, 'assets/ZZ_Illustrations/');
-
-            if(url.startsWith('/')) url = url.substring(1);
-            return url;
+            return `assets/${fileName}`;
         }
 
         let allCbtExams = [];
@@ -3389,9 +3373,12 @@
             // Audio Player with Prometric 2-plays limit & Multi-Tier Fallback
             const audioBox = document.getElementById('cbt-audio-box');
             const audioPlayer = document.getElementById('cbt-audio-player');
-            if(q.audio && q.audio.trim() !== "") {
+            const hasDialogues = q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0;
+            const targetAudio = q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '');
+
+            if(targetAudio && targetAudio.trim() !== "") {
                 audioBox.classList.remove('hidden');
-                const rawAudio = q.audio.trim();
+                const rawAudio = targetAudio.trim();
                 const resolvedAudio = resolveAudioUrl(rawAudio);
                 audioPlayer.src = resolvedAudio;
                 
@@ -3410,9 +3397,11 @@
                     }
                     audioAttempt++;
                     if(audioAttempt === 1) {
-                        audioPlayer.src = isSingleLetter ? `assets/${upperFn}` : `/api/audio/${audioFn}`;
+                        audioPlayer.src = hasDialogues ? `assets/audio/dialogue_${lowerFn}` : (isSingleLetter ? `assets/${upperFn}` : `/api/audio/${audioFn}`);
                     } else if(audioAttempt === 2) {
-                        audioPlayer.src = isSingleLetter ? `assets/audio/${upperFn}` : `${prodCdn}/api/audio/${audioFn}`;
+                        audioPlayer.src = hasDialogues ? `${prodCdn}/api/audio/dialogue_${lowerFn}` : (isSingleLetter ? `assets/audio/${upperFn}` : `${prodCdn}/api/audio/${audioFn}`);
+                    } else if(audioAttempt === 3 && hasDialogues) {
+                        audioPlayer.src = `assets/audio/${lowerFn}`;
                     } else if(audioAttempt === 3 && isSingleLetter) {
                         audioPlayer.src = `${prodCdn}/assets/${upperFn}`;
                     } else {
