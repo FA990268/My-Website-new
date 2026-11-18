@@ -224,23 +224,38 @@ router.get('/tts/parse-speaker', (req: Request, res: Response) => {
   res.json(parseSpeakerRole(name));
 });
 
-// Audio Delivery Route (serves synthesized unique audio files)
+// Audio Delivery Route (serves synthesized unique audio files with case-insensitive fallback)
 router.get(['/audio/:filename', '/tts/audio/:filename'], (req: Request, res: Response) => {
   const rawParam = req.params.filename;
   const filename = path.basename(Array.isArray(rawParam) ? rawParam[0] : (rawParam || ''));
+  const isLetter = /^[a-iA-I]\.mp3$/i.test(filename);
+  const candidates = Array.from(new Set([
+    filename,
+    filename.toUpperCase(),
+    filename.toLowerCase(),
+    isLetter ? `${filename[0].toUpperCase()}.mp3` : filename,
+    isLetter ? `${filename[0].toLowerCase()}.mp3` : filename
+  ]));
+
   for (const dir of getAudioDirectories()) {
-    const p = path.join(dir, filename);
-    if (fs.existsSync(p)) {
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.sendFile(p);
+    for (const cand of candidates) {
+      const p = path.join(dir, cand);
+      if (fs.existsSync(p)) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(p);
+      }
     }
   }
-  const rootAsset = path.resolve(__dirname, '../../assets', filename);
-  if (fs.existsSync(rootAsset)) {
-    res.setHeader('Content-Type', 'audio/mpeg');
-    return res.sendFile(rootAsset);
+
+  for (const cand of candidates) {
+    const rootAsset = path.resolve(__dirname, '../../assets', cand);
+    if (fs.existsSync(rootAsset)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      return res.sendFile(rootAsset);
+    }
   }
+
   res.status(404).json({ error: 'Audio file not found', filename });
 });
 

@@ -7,6 +7,14 @@
     {
       "source": "/audio/(.*)",
       "destination": "/backend/api/index.js"
+    },
+    {
+      "source": "/assets/audio/(.*)",
+      "destination": "/backend/api/index.js"
+    },
+    {
+      "source": "/assets/:filename((?i)[a-i]\\.mp3)",
+      "destination": "/backend/api/index.js"
     }
   ]
 }

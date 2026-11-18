@@ -46,10 +46,23 @@ app.use('/audio', express.static(path.resolve(__dirname, '../../assets/audio')))
 app.use('/data', express.static(path.resolve(__dirname, '../../data')));
 app.use('/data', express.static(path.resolve(__dirname, '../data')));
 
-// Dedicated Audio Serving Handlers (supports /audio, /assets/audio, /api/audio)
-app.get(['/audio/:filename', '/assets/audio/:filename', '/api/audio/:filename'], (req: Request, res: Response, next) => {
+// Dedicated Audio Serving Handlers (supports /audio, /assets/audio, /api/audio, /assets)
+app.get(['/audio/:filename', '/assets/audio/:filename', '/api/audio/:filename', '/assets/:filename'], (req: Request, res: Response, next) => {
   const rawParam = req.params.filename;
   const filename = path.basename(Array.isArray(rawParam) ? rawParam[0] : (rawParam || ''));
+  if (!filename.toLowerCase().endsWith('.mp3')) {
+    return next();
+  }
+
+  const isLetter = /^[a-iA-I]\.mp3$/i.test(filename);
+  const candidates = Array.from(new Set([
+    filename,
+    filename.toUpperCase(),
+    filename.toLowerCase(),
+    isLetter ? `${filename[0].toUpperCase()}.mp3` : filename,
+    isLetter ? `${filename[0].toLowerCase()}.mp3` : filename
+  ]));
+
   const searchDirs = [
     path.resolve(process.cwd(), 'public/assets/audio'),
     path.resolve(process.cwd(), 'assets/audio'),
@@ -58,14 +71,19 @@ app.get(['/audio/:filename', '/assets/audio/:filename', '/api/audio/:filename'],
     path.resolve(__dirname, '../public/assets/audio'),
     path.resolve(__dirname, '../public/assets'),
     path.resolve(__dirname, '../../assets'),
+    path.resolve(process.cwd(), 'assets'),
+    path.resolve(process.cwd(), 'public/assets'),
     path.resolve(os.tmpdir(), 'cbt_audio')
   ];
+
   for (const dir of searchDirs) {
-    const fullPath = path.join(dir, filename);
-    if (fs.existsSync(fullPath)) {
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.sendFile(fullPath);
+    for (const cand of candidates) {
+      const fullPath = path.join(dir, cand);
+      if (fs.existsSync(fullPath)) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(fullPath);
+      }
     }
   }
   next();

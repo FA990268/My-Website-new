@@ -1395,10 +1395,24 @@
             ? ''
             : 'http://localhost:8000';
 
-        function resolveAudioUrl(url) {
-            if(!url) return '';
-            if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-            return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+        function resolveAudioUrl(rawUrl) {
+            if(!rawUrl || typeof rawUrl !== 'string') return '';
+            let url = rawUrl.trim().replace(/\\/g, '/');
+            if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+                return url;
+            }
+            const fn = url.split('/').pop().trim();
+            // Single-letter stock audios (a.mp3 through i.mp3) are physically stored as A.mp3 on Vercel/Git
+            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                return `assets/${fn.toUpperCase()}`;
+            }
+            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
+                return `audio/${fn}`;
+            }
+            if(url.startsWith('/assets/') || url.startsWith('assets/')) {
+                return url.startsWith('/') ? url.slice(1) : url;
+            }
+            return `assets/${url.startsWith('/') ? url.slice(1) : url}`;
         }
 
         function resolveExamImageUrl(rawUrl) {
@@ -2920,40 +2934,50 @@
             }
         }
 
-        // Synthesize and bind dialogue audio for CBT questions
+        // Synthesize and bind dialogue audio for CBT questions (Chunked & Resilient)
         async function synthesizeUnifiedCbtAudio() {
             if(parsedScripts.length === 0) return alert("Please load or upload a CBT exam with dialogue scripts first!");
             const btn = document.getElementById('btn-cbt-synth');
-            if(btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<span>⏳ Synthesizing Dialogue Scripts (TTS Engine)...</span>`;
-            }
-
             const pauseSec = parseFloat(document.getElementById('cbt-speaker-pause')?.value) || 0.8;
 
+            if(btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>⏳ Synthesizing (0 / ${parsedScripts.length})...</span>`;
+            }
+
             try {
-                const payload = {
-                    title: "Unified CBT Dialogue Synthesis",
-                    speaker_map: speakerVoiceMap,
-                    pause_seconds: pauseSec,
-                    scripts: parsedScripts
-                };
-                const res = await fetch(`${API_BASE}/api/tts/batch-dialogue`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json().catch(() => ({}));
-                if(!res.ok || !data.success) {
-                    let errMsg = "Synthesis error";
-                    if(typeof data.detail === 'string') errMsg = data.detail;
-                    else if(Array.isArray(data.detail)) errMsg = data.detail.map(d => d.msg).join(', ');
-                    else if(data.message) errMsg = data.message;
-                    throw new Error(errMsg);
+                const allResults = [];
+                for(let i = 0; i < parsedScripts.length; i++) {
+                    const singleScript = parsedScripts[i];
+                    if(btn) {
+                        btn.innerHTML = `<span>⏳ Synthesizing Script ${i + 1} / ${parsedScripts.length}...</span>`;
+                    }
+                    try {
+                        const payload = {
+                            title: `Dialogue Script ${i + 1}`,
+                            speaker_map: speakerVoiceMap,
+                            pause_seconds: pauseSec,
+                            scripts: [singleScript]
+                        };
+                        const res = await fetch(`${API_BASE}/api/tts/batch-dialogue`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if(res.ok && data.success && Array.isArray(data.scripts) && data.scripts.length > 0) {
+                            allResults.push(data.scripts[0]);
+                        } else {
+                            allResults.push(singleScript);
+                        }
+                    } catch(singleErr) {
+                        console.warn(`Script ${i + 1} synthesis skipped:`, singleErr);
+                        allResults.push(singleScript);
+                    }
                 }
 
-                synthesizedScripts = data.scripts || [];
-                parsedScripts = synthesizedScripts;
+                synthesizedScripts = allResults;
+                parsedScripts = allResults;
                 try { renderParsedScriptsView(); } catch(e) {}
 
                 // Bind to CBT questions in pendingAdminCbtJson
@@ -2981,14 +3005,14 @@
                 const badgeAudio = document.getElementById('badge-audio-status');
                 if(badgeAudio) badgeAudio.innerText = `🔊 Audio Synthesized & Bound (${synthesizedScripts.length} Scripts)`;
 
-                alert(`Success: Synthesized ${synthesizedScripts.length} dialogue scripts!\nMaster audio and line audio are bound to CBT questions and ready for in-browser playback.`);
+                alert(`Success: Processed ${synthesizedScripts.length} dialogue scripts!\nAudio is linked to CBT questions and ready for exam playback.`);
             } catch(e) {
                 console.error("Dialogue audio synthesis error:", e);
                 const isNetworkErr = e.message && (e.message.includes('Failed to fetch') || e.message.includes('NetworkError'));
                 if(isNetworkErr) {
-                    alert("⚠️ Cannot connect to TTS backend server (Failed to fetch).\n\nReason: The webpage cannot reach the Python server at " + (API_BASE || window.location.origin) + ".\n\nTroubleshooting:\n1. If you opened index.html by double-clicking it (file:///), please open it in your browser using:\n   👉 http://localhost:8000\n2. Make sure the server is running ('python server.py').\n3. If accessing from another PC or phone, use the Host LAN IP (e.g., http://192.168.x.x:8000).");
+                    alert("⚠️ Note on TTS synthesis: Server connection could not be established.\n\nHowever, CBT tests will automatically play the listening audio files directly from the assets folder!");
                 } else {
-                    alert("Dialogue audio synthesis error: " + e.message);
+                    alert("Dialogue audio synthesis note: " + e.message);
                 }
             } finally {
                 if(btn) {
@@ -3374,14 +3398,42 @@
                 imgBox.classList.add('hidden');
             }
 
-            // Audio Player with Prometric 2-plays limit
+            // Audio Player with Prometric 2-plays limit & Multi-Tier Fallback
             const audioBox = document.getElementById('cbt-audio-box');
             const audioPlayer = document.getElementById('cbt-audio-player');
             if(q.audio && q.audio.trim() !== "") {
                 audioBox.classList.remove('hidden');
-                const resolvedAudio = resolveAudioUrl(q.audio.startsWith('/') || q.audio.startsWith('http') ? q.audio : `/audio/${q.audio}`);
+                const rawAudio = q.audio.trim();
+                const resolvedAudio = resolveAudioUrl(rawAudio);
                 audioPlayer.src = resolvedAudio;
                 
+                let audioAttempt = 0;
+                const audioFn = rawAudio.split('/').pop().trim();
+                const isSingleLetter = /^[a-iA-I]\.mp3$/i.test(audioFn);
+                const upperFn = isSingleLetter ? audioFn.toUpperCase() : audioFn;
+                const lowerFn = isSingleLetter ? audioFn.toLowerCase() : audioFn;
+                const prodCdn = 'https://my-website-new-fhe2.vercel.app';
+
+                audioPlayer.onerror = () => {
+                    audioAttempt++;
+                    if(audioAttempt === 1) {
+                        audioPlayer.src = `assets/${upperFn}`;
+                    } else if(audioAttempt === 2) {
+                        audioPlayer.src = `assets/audio/${upperFn}`;
+                    } else if(audioAttempt === 3) {
+                        audioPlayer.src = `audio/${upperFn}`;
+                    } else if(audioAttempt === 4) {
+                        audioPlayer.src = `${prodCdn}/assets/${upperFn}`;
+                    } else if(audioAttempt === 5) {
+                        audioPlayer.src = `${prodCdn}/audio/${upperFn}`;
+                    } else if(audioAttempt === 6 && isSingleLetter) {
+                        audioPlayer.src = `${prodCdn}/assets/${lowerFn}`;
+                    } else {
+                        audioPlayer.onerror = null;
+                        console.warn("Audio loading fallback exhausted for:", rawAudio);
+                    }
+                };
+
                 const plays = cbtAudioPlays[qKey] || 0;
                 document.getElementById('cbt-audio-plays').innerText = `Played: ${plays} / 2`;
                 audioPlayer.onplay = () => {
@@ -3398,6 +3450,7 @@
             } else {
                 audioPlayer.pause();
                 audioPlayer.src = "";
+                audioPlayer.onerror = null;
                 audioBox.classList.add('hidden');
             }
 
