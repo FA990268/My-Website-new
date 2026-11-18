@@ -2627,62 +2627,26 @@
             previewUnifiedCbtStudio(raw, sourceName);
             if(!pendingAdminCbtJson) return;
 
-            const examId = pendingAdminCbtJson.id || ("cbt_" + Date.now());
-            const title = pendingAdminCbtJson.title;
-            const newExam = {
-                id: examId,
-                title: title,
-                passMark: pendingAdminCbtJson.passMark,
-                duration: pendingAdminCbtJson.duration,
-                questions: pendingAdminCbtJson.questions,
-                isActive: true,
-                createdAt: new Date().toISOString()
-            };
+            const title = pendingAdminCbtJson.title || "Uploaded Exam";
+            const qCount = pendingAdminCbtJson.questions ? pendingAdminCbtJson.questions.length : 0;
+            const sCount = parsedScripts ? parsedScripts.length : 0;
 
             if(isUserUpload) {
-                // Clear from deleted IDs & titles blacklist
-                try {
-                    let deletedIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
-                    deletedIds = deletedIds.filter(id => id !== examId && id !== title);
-                    localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedIds));
-                } catch(e) {}
-
-                // Merge into allCbtExams
-                const existingIdx = allCbtExams.findIndex(x => x.id === examId || (x.title && x.title === title));
-                if(existingIdx !== -1) {
-                    allCbtExams[existingIdx] = newExam;
-                } else {
-                    allCbtExams.unshift(newExam);
+                // Navigate user straight to Unified CBT Studio so they can review and synthesize audio
+                if(typeof switchView === 'function') {
+                    switchView('admin');
                 }
-
-                try {
-                    localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
-                } catch(err) {
-                    console.warn("Storage warning:", err);
+                const studioEl = document.getElementById('unified-cbt-studio');
+                if(studioEl) {
+                    studioEl.scrollIntoView({ behavior: 'smooth' });
                 }
-
-                // Sync with server in background
-                fetch(`${API_BASE}/api/exams`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newExam)
-                }).then(r => r.json()).then(data => {
-                    console.log("Exam persisted to server:", data);
-                }).catch(e => {
-                    console.warn("Server sync note (saved locally):", e);
-                });
-
-                // Re-render all views immediately
-                renderAdminCbtList();
-                renderHomeExams();
-                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-                renderStudentCbtList();
 
                 const statusEl = document.getElementById('cbt-json-status');
                 if(statusEl) {
-                    statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" uploaded, published & added (${newExam.questions.length} questions)!</span>`;
+                    statusEl.innerHTML = `<span class="text-cyan-300 font-bold">📋 Loaded "${title}" (${qCount} questions, ${sCount} dialogue scripts). Ready for Audio Synthesis & Review. (Not yet published)</span>`;
                 }
-                alert(`✓ Model Test / Exam "${title}" uploaded & added successfully!\nIt is now live on the Home page and Mock Tests.`);
+
+                alert(`✓ File "${sourceName || title}" loaded into Studio!\n\n📋 Total Questions: ${qCount}\n🎧 Dialogue Scripts: ${sCount}\n\n👉 It is NOT published yet. You can now:\n1. Review the questions and dialogue lines below.\n2. Click "⚡ GENERATE / ATTACH DIALOGUE AUDIO (TTS)" to synthesize dialogue speech.\n3. Test the voices.\n4. Click "💾 PUBLISH UNIFIED CBT EXAM TO SERVER" when you are ready to make it live!`);
             }
         }
 
@@ -3964,8 +3928,9 @@
             const qs = pendingAdminCbtJson ? pendingAdminCbtJson.questions : (allCbtExams[0] ? allCbtExams[0].questions : []);
             if(!qs || qs.length === 0) return alert("Please upload a valid CBT JSON file first");
 
+            const examId = (pendingAdminCbtJson && pendingAdminCbtJson.id) || ("cbt_" + Date.now());
             const newExam = {
-                id: (pendingAdminCbtJson && pendingAdminCbtJson.id) || ("cbt_" + Date.now()),
+                id: examId,
                 title: title,
                 passMark: passMark,
                 duration: duration,
