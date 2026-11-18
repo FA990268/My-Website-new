@@ -2215,36 +2215,17 @@
         let pendingExamLaunch = null;
 
         function launchCbtFromCard(examId) {
-            const name = document.getElementById('s-name')?.value.trim();
-            if(!name) {
-                pendingExamLaunch = { type: 'cbt', id: examId };
-                navigateTo('login');
-                const targetExam = (allCbtExams || []).find(e => e.id === examId);
-                const hint = document.getElementById('login-pending-hint');
-                if(hint) {
-                    hint.innerHTML = `<span>🎯 Target Exam: <b>${targetExam ? targetExam.title : 'Selected CBT Exam'}</b> — Enter candidate name to begin!</span>`;
-                    hint.classList.remove('hidden');
-                }
-                const inp = document.getElementById('s-name');
-                if(inp) inp.focus();
-                return;
+            const nameInput = document.getElementById('s-name');
+            if(nameInput && !nameInput.value.trim()) {
+                nameInput.value = "Candidate";
             }
             selectCbtExam(examId);
         }
 
         function launchModelFromCard(group, idx) {
-            const name = document.getElementById('s-name')?.value.trim();
-            if(!name) {
-                pendingExamLaunch = { type: 'model', group: group, idx: idx };
-                navigateTo('login');
-                const hint = document.getElementById('login-pending-hint');
-                if(hint) {
-                    hint.innerHTML = `<span>📄 Target Test: <b>Model Test (${group} #${idx + 1})</b> — Enter candidate name to begin!</span>`;
-                    hint.classList.remove('hidden');
-                }
-                const inp = document.getElementById('s-name');
-                if(inp) inp.focus();
-                return;
+            const nameInput = document.getElementById('s-name');
+            if(nameInput && !nameInput.value.trim()) {
+                nameInput.value = "Candidate";
             }
             openExam(group, idx);
         }
@@ -2397,8 +2378,8 @@
         }
 
         function backToCbtList() {
-            document.getElementById('cbt-start-sec').classList.add('hidden');
-            document.getElementById('cbt-selection-sec').classList.remove('hidden');
+            document.getElementById('cbt-start-sec')?.classList.add('hidden');
+            navigateTo('mock');
         }
 
         function openModelTestSelection() {
@@ -3028,44 +3009,147 @@
         }
 
         function selectCbtExam(id) {
-            const found = allCbtExams.find(x => x.id === id);
-            if(!found) return;
-            activeCbtExam = found;
-            document.getElementById('confirm-cbt-name').innerText = found.title;
-            document.getElementById('confirm-cbt-duration').innerText = found.duration;
-            document.getElementById('confirm-cbt-pass').innerText = found.passMark;
-            document.getElementById('confirm-cbt-qcount').innerText = found.questions.length;
+            const nameInput = document.getElementById('s-name');
+            if(nameInput && !nameInput.value.trim()) {
+                nameInput.value = "Candidate";
+            }
 
-            document.getElementById('cbt-selection-sec').classList.add('hidden');
-            document.getElementById('cbt-start-sec').classList.remove('hidden');
+            let found = (allCbtExams || []).find(x => String(x.id) === String(id) || x.id === id);
+            if(!found) {
+                found = (allCbtExams || []).find(x => x.title === id);
+            }
+            if(!found && typeof id === 'number') {
+                found = (allCbtExams || [])[id];
+            }
+            if(!found && (allCbtExams || []).length > 0) {
+                found = allCbtExams[0];
+            }
+            if(!found) {
+                alert("Exam not found or no questions loaded.");
+                return;
+            }
+
+            activeCbtExam = found;
+            const qs = found.questions || found.data?.questions || found.exam_data?.questions || found.examData || [];
+            const duration = found.duration || found.data?.duration || 60;
+            const passMark = found.passMark || found.data?.passMark || 200;
+            const title = found.title || found.data?.title || "JFT-Basic Official Prometric CBT Exam";
+
+            const nameEl = document.getElementById('confirm-cbt-name');
+            const durEl = document.getElementById('confirm-cbt-duration');
+            const passEl = document.getElementById('confirm-cbt-pass');
+            const qCountEl = document.getElementById('confirm-cbt-qcount');
+            if(nameEl) nameEl.innerText = title;
+            if(durEl) durEl.innerText = duration;
+            if(passEl) passEl.innerText = passMark;
+            if(qCountEl) qCountEl.innerText = qs.length || 40;
+
+            // Hide all background views and intermediate navigation sections
+            const hideIds = [
+                'view-home', 'view-mock', 'view-about', 'view-courses',
+                'login-sec', 'portal-choice-sec', 'cbt-selection-sec',
+                'selection-sec', 'start-page-sec', 'admin-panel-sec',
+                'result-ui', 'exam-ui', 'cbt-exam-ui'
+            ];
+            hideIds.forEach(hid => {
+                const el = document.getElementById(hid);
+                if(el) el.classList.add('hidden');
+            });
+
+            const startSec = document.getElementById('cbt-start-sec');
+            if(startSec) startSec.classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
         }
 
         function launchCbtExam() {
-            if(!activeCbtExam) return;
-            document.getElementById('cbt-start-sec').classList.add('hidden');
-            document.getElementById('top-nav-bar').classList.add('hidden');
-            document.getElementById('cbt-exam-ui').classList.remove('hidden');
+            if(!activeCbtExam) {
+                if((allCbtExams || []).length > 0) activeCbtExam = allCbtExams[0];
+                else {
+                    alert("No CBT exam available to start.");
+                    return;
+                }
+            }
 
-            const photo = document.getElementById('s-photo').files[0];
+            // Hide all background screens and show CBT UI
+            const hideIds = [
+                'view-home', 'view-mock', 'view-about', 'view-courses',
+                'login-sec', 'portal-choice-sec', 'cbt-selection-sec',
+                'selection-sec', 'start-page-sec', 'admin-panel-sec',
+                'result-ui', 'exam-ui', 'cbt-start-sec', 'top-nav-bar'
+            ];
+            hideIds.forEach(hid => {
+                const el = document.getElementById(hid);
+                if(el) el.classList.add('hidden');
+            });
+
+            const examUi = document.getElementById('cbt-exam-ui');
+            if(examUi) examUi.classList.remove('hidden');
+
+            const photo = document.getElementById('s-photo')?.files?.[0];
             if(photo) {
                 const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('res-photo').src = e.target.result;
+                reader.onload = (e) => {
+                    const resPhoto = document.getElementById('res-photo');
+                    if(resPhoto) resPhoto.src = e.target.result;
+                };
                 reader.readAsDataURL(photo);
             }
 
-            cbtQuestions = activeCbtExam.questions;
+            cbtQuestions = activeCbtExam.questions || activeCbtExam.data?.questions || activeCbtExam.exam_data?.questions || activeCbtExam.examData || [];
             cbtCurrentIdx = 0;
             cbtAnswers = {};
             cbtFlags = {};
             cbtAudioPlays = {};
-            time = (parseInt(activeCbtExam.duration, 10) || 60) * 60;
+            time = (parseInt(activeCbtExam.duration || activeCbtExam.data?.duration, 10) || 60) * 60;
 
-            document.getElementById('cbt-header-title').innerText = activeCbtExam.title;
-            document.getElementById('cbt-candidate-name').innerText = document.getElementById('s-name').value || "CANDIDATE";
+            const headTitle = document.getElementById('cbt-header-title');
+            if(headTitle) headTitle.innerText = activeCbtExam.title || activeCbtExam.data?.title || "JFT-Basic Official Prometric CBT Exam";
+
+            const candName = document.getElementById('cbt-candidate-name');
+            const sNameVal = document.getElementById('s-name')?.value?.trim();
+            if(candName) candName.innerText = sNameVal || "CANDIDATE";
 
             renderCbtQuestion();
             startCbtTimer();
             saveCbtSession();
+
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+
+        function openExam(group, idx) {
+            const nameInput = document.getElementById('s-name');
+            if(nameInput && !nameInput.value.trim()) {
+                nameInput.value = "Candidate";
+            }
+            const found = allExams[idx] || (allExams || []).find(e => e.group === group);
+            if(!found) {
+                alert("Model test not found.");
+                return;
+            }
+            config = found.examData || found.items || [];
+            time = (found.duration || 60) * 60;
+            const nameEl = document.getElementById('confirm-model-name');
+            if(nameEl) nameEl.innerText = found.modelName || found.name || `Model Test (${group})`;
+
+            const hideIds = [
+                'view-home', 'view-mock', 'view-about', 'view-courses',
+                'login-sec', 'portal-choice-sec', 'cbt-selection-sec',
+                'selection-sec', 'start-page-sec', 'admin-panel-sec',
+                'result-ui', 'exam-ui', 'cbt-exam-ui', 'cbt-start-sec'
+            ];
+            hideIds.forEach(hid => {
+                const el = document.getElementById(hid);
+                if(el) el.classList.add('hidden');
+            });
+
+            const startSec = document.getElementById('start-page-sec');
+            if(startSec) startSec.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
         // --- CBT Session Persistence (Prevents session loss on desktop site toggle / reload) ---
@@ -3464,10 +3548,10 @@
             const isPassed = scaled >= passMarkVal;
 
             document.getElementById('res-total').innerText = scaled;
-            document.getElementById('res-name').innerText = document.getElementById('s-name').value;
-            document.getElementById('res-reg').innerText = document.getElementById('s-reg').value;
-            document.getElementById('res-dob').innerText = document.getElementById('s-dob').value;
-            document.getElementById('res-loc').innerText = document.getElementById('s-loc').value;
+            document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
+            document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
+            document.getElementById('res-dob').innerText = document.getElementById('s-dob')?.value || "";
+            document.getElementById('res-loc').innerText = document.getElementById('s-loc')?.value || "";
             document.getElementById('res-date').innerText = new Date().toLocaleDateString();
             document.getElementById('total-score-fill').style.width = (scaled / 250 * 100) + "%";
             document.getElementById('total-marker').innerText = scaled;
@@ -4366,23 +4450,35 @@
         }
 
         function startExam() {
-            document.getElementById('start-page-sec').classList.add('hidden');
-            document.getElementById('top-nav-bar').classList.add('hidden');
+            const hideIds = [
+                'view-home', 'view-mock', 'view-about', 'view-courses',
+                'login-sec', 'portal-choice-sec', 'cbt-selection-sec',
+                'selection-sec', 'start-page-sec', 'top-nav-bar', 'admin-panel-sec',
+                'cbt-exam-ui', 'cbt-start-sec'
+            ];
+            hideIds.forEach(hid => {
+                const el = document.getElementById(hid);
+                if(el) el.classList.add('hidden');
+            });
             document.getElementById('exam-ui').classList.remove('hidden');
-            document.getElementById('user-display').innerText = "CANDIDATE: " + (document.getElementById('s-name').value || "Candidate");
+            document.getElementById('user-display').innerText = "CANDIDATE: " + (document.getElementById('s-name')?.value || "Candidate");
             
-            const pdfFile = document.getElementById('pdf-input').files[0];
+            const pdfFile = document.getElementById('pdf-input')?.files?.[0];
             if(pdfFile) document.getElementById('pdf-view').src = URL.createObjectURL(pdfFile);
             
-            const photo = document.getElementById('s-photo').files[0];
+            const photo = document.getElementById('s-photo')?.files?.[0];
             if(photo) {
                 const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('res-photo').src = e.target.result;
+                reader.onload = (e) => {
+                    const resPhoto = document.getElementById('res-photo');
+                    if(resPhoto) resPhoto.src = e.target.result;
+                };
                 reader.readAsDataURL(photo);
             }
             renderQuestions();
             startTimer();
             saveModelSession();
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
         function renderQuestions() {
@@ -4452,10 +4548,10 @@
             });
             let scaled = Math.round((userScore / (grandTotal || 1)) * 250);
             document.getElementById('res-total').innerText = scaled;
-            document.getElementById('res-name').innerText = document.getElementById('s-name').value;
-            document.getElementById('res-reg').innerText = document.getElementById('s-reg').value;
-            document.getElementById('res-dob').innerText = document.getElementById('s-dob').value;
-            document.getElementById('res-loc').innerText = document.getElementById('s-loc').value;
+            document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
+            document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
+            document.getElementById('res-dob').innerText = document.getElementById('s-dob')?.value || "";
+            document.getElementById('res-loc').innerText = document.getElementById('s-loc')?.value || "";
             document.getElementById('res-date').innerText = new Date().toLocaleDateString();
             document.getElementById('total-score-fill').style.width = (scaled/250 * 100) + "%";
             document.getElementById('total-marker').innerText = scaled;
