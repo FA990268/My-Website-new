@@ -14,30 +14,34 @@
             if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
                 return url;
             }
-            const fn = url.split('/').pop().trim();
 
-            // 1. Stock single-letter audio (a.mp3 through i.mp3) physically stored as A.mp3 in assets/
-            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
-                return `assets/${fn.toUpperCase()}`;
-            }
-
-            // 2. Dedicated API audio route (/api/audio/...)
+            // 1. Dedicated API Audio Endpoint (/api/audio/...) MUST take top priority
             if(url.startsWith('/api/audio/') || url.startsWith('api/audio/')) {
                 const clean = url.startsWith('/') ? url : `/${url}`;
                 return `${API_BASE}${clean}`;
             }
 
-            // 3. Audio routes (/audio/...)
-            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
-                return `${API_BASE}/audio/${fn}`;
-            }
-
-            // 4. Unique turn audio files (turn_<id>_<hash>.mp3)
-            if(fn.startsWith('turn_')) {
+            // 2. Synthesized dialogue and turn audio files
+            const fn = url.split('/').pop().trim();
+            if(fn.startsWith('turn_') || fn.startsWith('dialogue_')) {
                 return `${API_BASE}/api/audio/${fn}`;
             }
 
-            // 5. Assets directory (/assets/...)
+            // 3. Dedicated audio folder routes (/audio/...)
+            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
+                // If single letter stock prompt in /audio/ (e.g. /audio/a.mp3), map to assets/A.mp3
+                if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                    return `assets/${fn.toUpperCase()}`;
+                }
+                return `${API_BASE}/audio/${fn}`;
+            }
+
+            // 4. Stock single-letter audio (a.mp3 .. i.mp3)
+            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                return `assets/${fn.toUpperCase()}`;
+            }
+
+            // 5. Assets static directory (/assets/...)
             if(url.startsWith('/assets/') || url.startsWith('assets/')) {
                 return url.startsWith('/') ? url.slice(1) : url;
             }

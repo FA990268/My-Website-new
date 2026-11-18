@@ -1401,30 +1401,34 @@
             if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
                 return url;
             }
-            const fn = url.split('/').pop().trim();
 
-            // 1. Stock single-letter audio (a.mp3 through i.mp3) physically stored as A.mp3 in assets/
-            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
-                return `assets/${fn.toUpperCase()}`;
-            }
-
-            // 2. Dedicated API audio route (/api/audio/...)
+            // 1. Dedicated API Audio Endpoint (/api/audio/...) MUST take top priority
             if(url.startsWith('/api/audio/') || url.startsWith('api/audio/')) {
                 const clean = url.startsWith('/') ? url : `/${url}`;
                 return `${API_BASE}${clean}`;
             }
 
-            // 3. Audio routes (/audio/...)
-            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
-                return `${API_BASE}/audio/${fn}`;
-            }
-
-            // 4. Unique turn audio files (turn_<id>_<hash>.mp3)
-            if(fn.startsWith('turn_')) {
+            // 2. Synthesized dialogue and turn audio files
+            const fn = url.split('/').pop().trim();
+            if(fn.startsWith('turn_') || fn.startsWith('dialogue_')) {
                 return `${API_BASE}/api/audio/${fn}`;
             }
 
-            // 5. Assets directory (/assets/...)
+            // 3. Dedicated audio folder routes (/audio/...)
+            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
+                // If single letter stock prompt in /audio/ (e.g. /audio/a.mp3), map to assets/A.mp3
+                if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                    return `assets/${fn.toUpperCase()}`;
+                }
+                return `${API_BASE}/audio/${fn}`;
+            }
+
+            // 4. Stock single-letter audio (a.mp3 .. i.mp3)
+            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                return `assets/${fn.toUpperCase()}`;
+            }
+
+            // 5. Assets static directory (/assets/...)
             if(url.startsWith('/assets/') || url.startsWith('assets/')) {
                 return url.startsWith('/') ? url.slice(1) : url;
             }
@@ -2777,7 +2781,7 @@
                 const card = document.createElement('div');
                 card.className = "glass-panel p-6 border border-white/10";
                 
-                const masterPath = (s.masterAudio && s.masterAudio.audioUrl) ? s.masterAudio.audioUrl : (s.targetAudio ? `/audio/${s.targetAudio}` : '');
+                const masterPath = (s.masterAudio && (s.masterAudio.audio_base64 || s.masterAudio.audioUrl)) ? (s.masterAudio.audio_base64 || s.masterAudio.audioUrl) : (s.targetAudio ? `/audio/${s.targetAudio}` : '');
                 const initialAudioUrl = resolveAudioUrl(masterPath);
                 let masterPlayerHtml = `
                     <div id="master-player-${s.id}" class="mt-4 p-4 bg-sky-950/40 border border-sky-400/30 rounded-xl flex flex-wrap justify-between items-center gap-4">
@@ -2792,6 +2796,7 @@
                             <div class="flex items-center gap-3">
                                 <audio controls src="${initialAudioUrl}" class="h-9 w-64"></audio>
                                 <a href="${initialAudioUrl}" target="_blank" class="text-xs text-sky-400 hover:text-white underline">Direct URL</a>
+                                ${s.masterAudio ? `<span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">${s.masterAudio.duration}s • Bound</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2801,7 +2806,7 @@
                 let turnsHtml = s.dialogues.map((turn, tIdx) => {
                     const spkConf = speakerVoiceMap[turn.speaker] || detectSpeakerVoice(turn.speaker);
                     const icon = spkConf.role_category === 'boy' ? '👦' : (spkConf.role_category === 'girl' ? '👧' : (spkConf.role_category === 'female' ? '👩' : '👨'));
-                    const turnAudioUrl = turn.turn_audio_url || turn.audioUrl || '';
+                    const turnAudioUrl = turn.audio_base64 || turn.turn_audio_url || turn.audioUrl || '';
                     return `
                         <div id="turn-card-${turn.id}" class="p-3.5 bg-white/5 border border-white/10 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition">
                             <div class="flex items-start gap-3 flex-1">
@@ -2885,7 +2890,7 @@
                 if(!data.success) throw new Error(data.detail || "TTS failed");
 
                 const audio = document.getElementById('global-turn-audio');
-                audio.src = resolveAudioUrl(data.audioUrl);
+                audio.src = data.audio_base64 || resolveAudioUrl(data.audioUrl);
                 audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
 
                 // Highlight active turn
@@ -3012,7 +3017,7 @@
                             (q.audio && q.audio.includes(s.targetAudio))
                         );
                         if(matched && matched.masterAudio) {
-                            q.audio = matched.masterAudio.audioUrl;
+                            q.audio = matched.masterAudio.audio_base64 || matched.masterAudio.audioUrl;
                             if(matched.dialogues && matched.dialogues.length > 0) {
                                 q.dialogues = matched.dialogues;
                             }
@@ -3434,19 +3439,18 @@
                 const prodCdn = 'https://my-website-new-fhe2.vercel.app';
 
                 audioPlayer.onerror = () => {
+                    // If audio was an embedded data URI or blob, do not fall back to stock A.mp3
+                    if (rawAudio.startsWith('data:') || rawAudio.startsWith('blob:')) {
+                        audioPlayer.onerror = null;
+                        return;
+                    }
                     audioAttempt++;
                     if(audioAttempt === 1) {
-                        audioPlayer.src = `assets/${upperFn}`;
+                        audioPlayer.src = isSingleLetter ? `assets/${upperFn}` : `/api/audio/${audioFn}`;
                     } else if(audioAttempt === 2) {
-                        audioPlayer.src = `assets/audio/${upperFn}`;
-                    } else if(audioAttempt === 3) {
-                        audioPlayer.src = `audio/${upperFn}`;
-                    } else if(audioAttempt === 4) {
+                        audioPlayer.src = isSingleLetter ? `assets/audio/${upperFn}` : `${prodCdn}/api/audio/${audioFn}`;
+                    } else if(audioAttempt === 3 && isSingleLetter) {
                         audioPlayer.src = `${prodCdn}/assets/${upperFn}`;
-                    } else if(audioAttempt === 5) {
-                        audioPlayer.src = `${prodCdn}/audio/${upperFn}`;
-                    } else if(audioAttempt === 6 && isSingleLetter) {
-                        audioPlayer.src = `${prodCdn}/assets/${lowerFn}`;
                     } else {
                         audioPlayer.onerror = null;
                         console.warn("Audio loading fallback exhausted for:", rawAudio);

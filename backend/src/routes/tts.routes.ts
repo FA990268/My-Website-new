@@ -190,27 +190,36 @@ export async function synthesizeSpeechBuffer(
   // Strategy 2: Google Translate TTS audio fetch (Universal zero-dependency network fallback)
   try {
     const lang = baseVoice.startsWith('en') ? 'en' : 'ja';
-    const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=${lang}&client=tw-ob`;
-    const resp = await fetch(googleUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      signal: AbortSignal.timeout(10000)
-    });
-    if (resp.ok) {
-      const arrayBuf = await resp.arrayBuffer();
-      const buf = Buffer.from(arrayBuf);
-      if (buf.length > 0) return buf;
+    const chunks = text.length <= 160 ? [text] : text.match(/.{1,150}([。！？\n\s]|$)/g) || [text];
+    const chunkBuffers: Buffer[] = [];
+
+    for (const rawChunk of chunks) {
+      const ch = rawChunk.trim();
+      if (!ch) continue;
+      const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(ch)}&tl=${lang}&client=tw-ob`;
+      const resp = await fetch(googleUrl, {
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://translate.google.com/'
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        if (buf.length > 0) chunkBuffers.push(buf);
+      }
+    }
+
+    if (chunkBuffers.length > 0) {
+      return Buffer.concat(chunkBuffers);
     }
   } catch (fbErr) {
-    // Log fallback error
+    // Google TTS network error
   }
 
-  // Strategy 3: Fallback to bundled sound if network completely offline
-  const fallbackAsset = path.resolve(__dirname, '../../assets/A.mp3');
-  if (fs.existsSync(fallbackAsset)) {
-    return fs.readFileSync(fallbackAsset);
-  }
-
-  return SILENT_FRAME;
+  // Never return default sound A.mp3 to avoid corrupting unique speech
+  throw new Error(`Speech synthesis engine unavailable for: "${text.substring(0, 30)}..."`);
 }
 
 // Voice Catalog
@@ -284,18 +293,30 @@ router.post('/tts/turn', async (req: Request, res: Response) => {
 
     let audioUrl = `/api/audio/${filename}`;
     let duration = Math.max(1.0, Math.round((cleanText.length * 0.22) * 10) / 10);
+    let outBuf: Buffer = Buffer.alloc(0);
 
     if (!alreadyExists) {
-      const buf = await synthesizeSpeechBuffer(cleanText, voice);
-      audioUrl = saveAudioBuffer(filename, buf);
-      duration = Math.max(1.0, Math.round((buf.length / 6000.0) * 10) / 10);
+      outBuf = await synthesizeSpeechBuffer(cleanText, voice);
+      audioUrl = saveAudioBuffer(filename, outBuf);
+      duration = Math.max(1.0, Math.round((outBuf.length / 6000.0) * 10) / 10);
+    } else {
+      for (const dir of getAudioDirectories()) {
+        const p = path.join(dir, filename);
+        if (fs.existsSync(p)) {
+          outBuf = fs.readFileSync(p);
+          break;
+        }
+      }
     }
+
+    const audioBase64 = outBuf && outBuf.length > 0 ? `data:audio/mp3;base64,${outBuf.toString('base64')}` : '';
 
     res.json({
       success: true,
       duration,
       voice_id: voice,
       audioUrl,
+      audio_base64: audioBase64,
       filename,
       message: "Unique turn audio synthesized successfully"
     });
@@ -323,6 +344,10 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
       let targetFilename = path.basename(rawTarget);
       if (!targetFilename.toLowerCase().endsWith('.mp3')) {
         targetFilename += '.mp3';
+      }
+      // Prevent collision with stock default single-letter audio files (A.mp3 .. I.mp3)
+      if (/^[a-iA-I]\.mp3$/i.test(targetFilename)) {
+        targetFilename = `dialogue_${targetFilename}`;
       }
 
       const turnChunks: Buffer[] = [];
@@ -371,6 +396,7 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
         totalSpeechDuration += turnDuration;
 
         turnChunks.push(turnBuf);
+        const turnBase64 = `data:audio/mp3;base64,${turnBuf.toString('base64')}`;
 
         processedTurns.push({
           ...turn,
@@ -379,8 +405,9 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
           text: text,
           voice: voiceId,
           duration: turnDuration,
-          turn_audio_url: turnAudioUrl,
-          audioUrl: turnAudioUrl
+          turn_audio_url: turnBase64,
+          audioUrl: turnAudioUrl,
+          audio_base64: turnBase64
         });
       }
 
@@ -395,6 +422,7 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
 
       const masterBuffer = masterChunks.length > 0 ? Buffer.concat(masterChunks) : SILENT_FRAME;
       const masterAudioUrl = saveAudioBuffer(targetFilename, masterBuffer);
+      const masterBase64 = `data:audio/mp3;base64,${masterBuffer.toString('base64')}`;
 
       const totalPauseDuration = Math.max(0, turnChunks.length - 1) * pauseSec;
       const totalDuration = Math.round((totalSpeechDuration + totalPauseDuration) * 10) / 10;
@@ -408,6 +436,7 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
         turns: processedTurns,
         masterAudio: {
           audioUrl: masterAudioUrl,
+          audio_base64: masterBase64,
           filename: targetFilename,
           duration: totalDuration,
           sizeKb: sizeKb,
