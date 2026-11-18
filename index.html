@@ -1442,7 +1442,10 @@
 
             try {
                 const savedExams = localStorage.getItem('jft_exam_db');
-                if(savedExams) allExams = JSON.parse(savedExams);
+                const deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
+                if(savedExams) {
+                    allExams = JSON.parse(savedExams).filter(ex => !deletedModels.includes(ex.modelName || ex.name));
+                }
             } catch(e) {}
 
             try { renderGroupOptions(); } catch(e) {}
@@ -1529,26 +1532,47 @@
         }
 
         async function loadCbtExams() {
+            let localExams = [];
+            let deletedIds = [];
+            try {
+                localExams = JSON.parse(localStorage.getItem('jft_cbt_db') || '[]');
+                deletedIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+            } catch(e) {}
+
             try {
                 const res = await fetch(`${API_BASE}/api/exams`);
                 if(res.ok) {
-                    allCbtExams = await res.json();
-                    try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(err) {}
+                    const serverExams = await res.json();
+                    if(Array.isArray(serverExams)) {
+                        // Merge server exams without resurrecting deleted ones
+                        const combined = [...localExams];
+                        serverExams.forEach(sExam => {
+                            const isDeleted = deletedIds.includes(sExam.id) || (sExam.title && deletedIds.includes(sExam.title));
+                            if(!isDeleted) {
+                                const exists = combined.some(l => l.id === sExam.id || (l.title && l.title === sExam.title));
+                                if(!exists) combined.push(sExam);
+                            }
+                        });
+                        allCbtExams = combined.filter(e => !deletedIds.includes(e.id) && !(e.title && deletedIds.includes(e.title)));
+                        try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(err) {}
+                    }
+                } else {
+                    allCbtExams = localExams.filter(e => !deletedIds.includes(e.id) && !(e.title && deletedIds.includes(e.title)));
                 }
             } catch(e) {
-                console.warn("Fallback to localStorage for CBT exams:", e);
-                const local = localStorage.getItem('jft_cbt_db');
-                if(local) {
-                    try { allCbtExams = JSON.parse(local); } catch(err) {}
-                }
+                console.warn("Using localStorage for CBT exams:", e);
+                allCbtExams = localExams.filter(e => !deletedIds.includes(e.id) && !(e.title && deletedIds.includes(e.title)));
             }
+
             try { renderStudentCbtList(); } catch(e) {}
             try { renderAdminCbtList(); } catch(e) {}
             try { renderHomeExams(); } catch(e) {}
             try { if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all'); } catch(e) {}
+
+            // Populate preview studio only (WITHOUT saving duplicate or alerting!)
             if(allCbtExams.length > 0 && !pendingAdminCbtJson) {
                 try {
-                    processUnifiedCbtData(allCbtExams[0]);
+                    previewUnifiedCbtStudio(allCbtExams[0]);
                 } catch(e) {}
             }
         }
@@ -2386,7 +2410,7 @@
             reader.onload = (e) => {
                 try {
                     const raw = JSON.parse(e.target.result);
-                    processUnifiedCbtData(raw, file.name);
+                    processUnifiedCbtData(raw, file.name, true);
                     input.value = "";
                 } catch(err) {
                     alert("Invalid JSON Exam file: " + err.message);
@@ -2397,30 +2421,7 @@
             reader.readAsText(file);
         }
 
-        function processUnifiedCbtData(raw, sourceName) {
-            // Check if uploaded JSON is a PDF Model Test structure
-            if(raw && (raw.examData || (raw.modelName && !raw.questions))) {
-                const mName = raw.modelName || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : `Model Test #${allExams.length + 1}`);
-                const mGroup = raw.group || 'GENERAL';
-                const mPass = raw.passMark || 200;
-                const mDur = raw.duration || 60;
-                const newModel = {
-                    group: mGroup,
-                    modelName: mName,
-                    passMark: mPass,
-                    duration: mDur,
-                    examData: raw.examData || [],
-                    isActive: true
-                };
-                allExams.unshift(newModel);
-                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
-                renderAdminModelList();
-                renderHomeExams();
-                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-                alert(`✓ Model Test "${mName}" uploaded and added successfully!`);
-                return;
-            }
-
+        function previewUnifiedCbtStudio(raw, sourceName) {
             let qs = [];
             if(Array.isArray(raw)) qs = raw;
             else if(raw && Array.isArray(raw.questions)) qs = raw.questions;
@@ -2438,24 +2439,20 @@
                 }));
             }
 
-            if(qs.length === 0) throw new Error("No questions array found in JSON file");
+            if(qs.length === 0) return;
 
-            const title = raw.title || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : "JFT-Basic Model CBT Test (40 Questions)");
+            const title = raw.title || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : "JFT-Basic Model CBT Test");
             const passMark = raw.passMark || 200;
             const duration = raw.duration || 60;
             const examId = raw.id || ("cbt_" + Date.now());
 
-            const newExam = {
+            pendingAdminCbtJson = {
                 id: examId,
                 title: title,
                 passMark: passMark,
                 duration: duration,
-                questions: qs,
-                isActive: true,
-                createdAt: new Date().toISOString()
+                questions: qs
             };
-
-            pendingAdminCbtJson = newExam;
 
             const titleInput = document.getElementById('cbt-exam-title');
             const passInput = document.getElementById('cbt-pass-mark');
@@ -2463,37 +2460,6 @@
             if(titleInput) titleInput.value = title;
             if(passInput) passInput.value = passMark;
             if(durationInput) durationInput.value = duration;
-
-            // Auto-save and auto-publish so uploaded test IMMEDIATELY appears on all lists!
-            const existingIdx = allCbtExams.findIndex(x => x.id === examId || (x.title && x.title === title));
-            if(existingIdx !== -1) {
-                allCbtExams[existingIdx] = newExam;
-            } else {
-                allCbtExams.unshift(newExam);
-            }
-
-            try {
-                localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
-            } catch(err) {
-                console.warn("Storage warning:", err);
-            }
-
-            // Sync with backend API in background
-            fetch(`${API_BASE}/api/exams`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newExam)
-            }).then(r => r.json()).then(data => {
-                console.log("Exam persisted to server:", data);
-            }).catch(e => {
-                console.warn("Server sync note (saved locally):", e);
-            });
-
-            // Re-render all views immediately
-            renderAdminCbtList();
-            renderHomeExams();
-            if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-            renderStudentCbtList();
 
             // Extract all dialogue scripts from questions or root
             let extractedScripts = [];
@@ -2561,9 +2527,105 @@
 
             const statusEl = document.getElementById('cbt-json-status');
             if(statusEl) {
-                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" uploaded, published & added (${qs.length} questions)!</span>`;
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" loaded (${qs.length} questions, ${parsedScripts.length} dialogue scripts)</span>`;
             }
-            alert(`✓ Model Test / Exam "${title}" uploaded & added successfully!\nIt is now live on the Home page and Mock Tests.`);
+        }
+
+        function processUnifiedCbtData(raw, sourceName, isUserUpload = false) {
+            // Check if uploaded JSON is a PDF Model Test structure
+            if(raw && (raw.examData || (raw.modelName && !raw.questions))) {
+                const mName = raw.modelName || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : `Model Test #${allExams.length + 1}`);
+                const mGroup = raw.group || 'GENERAL';
+                const mPass = raw.passMark || 200;
+                const mDur = raw.duration || 60;
+                const newModel = {
+                    group: mGroup,
+                    modelName: mName,
+                    passMark: mPass,
+                    duration: mDur,
+                    examData: raw.examData || [],
+                    isActive: true
+                };
+
+                // Clear from deleted model names blacklist
+                try {
+                    let deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
+                    deletedModels = deletedModels.filter(n => n !== mName);
+                    localStorage.setItem('jft_deleted_model_names', JSON.stringify(deletedModels));
+                } catch(e) {}
+
+                const exIdx = allExams.findIndex(x => x.modelName === mName);
+                if(exIdx !== -1) allExams[exIdx] = newModel;
+                else allExams.unshift(newModel);
+
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+                renderAdminModelList();
+                renderHomeExams();
+                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                if(isUserUpload) alert(`✓ Model Test "${mName}" uploaded and added successfully!`);
+                return;
+            }
+
+            previewUnifiedCbtStudio(raw, sourceName);
+            if(!pendingAdminCbtJson) return;
+
+            const examId = pendingAdminCbtJson.id || ("cbt_" + Date.now());
+            const title = pendingAdminCbtJson.title;
+            const newExam = {
+                id: examId,
+                title: title,
+                passMark: pendingAdminCbtJson.passMark,
+                duration: pendingAdminCbtJson.duration,
+                questions: pendingAdminCbtJson.questions,
+                isActive: true,
+                createdAt: new Date().toISOString()
+            };
+
+            if(isUserUpload) {
+                // Clear from deleted IDs & titles blacklist
+                try {
+                    let deletedIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+                    deletedIds = deletedIds.filter(id => id !== examId && id !== title);
+                    localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedIds));
+                } catch(e) {}
+
+                // Merge into allCbtExams
+                const existingIdx = allCbtExams.findIndex(x => x.id === examId || (x.title && x.title === title));
+                if(existingIdx !== -1) {
+                    allCbtExams[existingIdx] = newExam;
+                } else {
+                    allCbtExams.unshift(newExam);
+                }
+
+                try {
+                    localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
+                } catch(err) {
+                    console.warn("Storage warning:", err);
+                }
+
+                // Sync with server in background
+                fetch(`${API_BASE}/api/exams`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newExam)
+                }).then(r => r.json()).then(data => {
+                    console.log("Exam persisted to server:", data);
+                }).catch(e => {
+                    console.warn("Server sync note (saved locally):", e);
+                });
+
+                // Re-render all views immediately
+                renderAdminCbtList();
+                renderHomeExams();
+                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                renderStudentCbtList();
+
+                const statusEl = document.getElementById('cbt-json-status');
+                if(statusEl) {
+                    statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" uploaded, published & added (${newExam.questions.length} questions)!</span>`;
+                }
+                alert(`✓ Model Test / Exam "${title}" uploaded & added successfully!\nIt is now live on the Home page and Mock Tests.`);
+            }
         }
 
         function renderCbtOverviewBadges(totalQ, totalScripts, totalSpeakers) {
@@ -3669,8 +3731,15 @@
                 createdAt: new Date().toISOString()
             };
 
+            // Remove from deleted blacklist if user is actively publishing it
+            try {
+                let deletedIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+                deletedIds = deletedIds.filter(id => id !== examId && id !== title);
+                localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedIds));
+            } catch(e) {}
+
             // Save locally first
-            const existingIdx = allCbtExams.findIndex(x => x.id === newExam.id || x.title === title);
+            const existingIdx = allCbtExams.findIndex(x => x.id === examId || x.title === title);
             if(existingIdx !== -1) {
                 allCbtExams[existingIdx] = newExam;
             } else {
@@ -3682,19 +3751,18 @@
             if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
             renderStudentCbtList();
 
-            try {
-                const res = await fetch(`${API_BASE}/api/exams`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newExam)
-                });
-                if(!res.ok) throw new Error("Failed to save on server");
-                await loadCbtExams();
-                alert(`✓ CBT Exam "${title}" saved and published successfully!`);
-            } catch(e) {
+            // Background sync with server
+            fetch(`${API_BASE}/api/exams`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newExam)
+            }).then(r => r.json()).then(data => {
+                console.log("Exam persisted to server:", data);
+            }).catch(e => {
                 console.warn("Server save note (saved locally):", e);
-                alert(`✓ CBT Exam "${title}" saved and published successfully!`);
-            }
+            });
+
+            alert(`✓ CBT Exam "${title}" saved and published successfully!`);
         }
 
         function renderAdminCbtList() {
@@ -3763,8 +3831,16 @@
             const decodedTitle = decodeURIComponent(title || examId);
             if(!confirm(`Are you sure you want to delete CBT Exam:\n"${decodedTitle}"?\n\nThis cannot be undone.`)) return;
             
-            // Remove locally first so UI is immediately updated
-            allCbtExams = allCbtExams.filter(x => x.id !== examId);
+            // 1. Permanently blacklist from ever coming back
+            try {
+                let deletedIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+                if(!deletedIds.includes(examId)) deletedIds.push(examId);
+                if(decodedTitle && !deletedIds.includes(decodedTitle)) deletedIds.push(decodedTitle);
+                localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedIds));
+            } catch(e) {}
+
+            // 2. Remove locally so UI is immediately updated
+            allCbtExams = allCbtExams.filter(x => x.id !== examId && x.title !== decodedTitle);
             try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
             
             renderStudentCbtList();
@@ -3772,16 +3848,12 @@
             renderHomeExams();
             if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
 
+            // 3. Notify server in background (do NOT reload from server here!)
             try {
-                const res = await fetch(`${API_BASE}/api/exams/${encodeURIComponent(examId)}`, {
+                fetch(`${API_BASE}/api/exams/${encodeURIComponent(examId)}`, {
                     method: 'DELETE'
-                });
-                if(res.ok) {
-                    await loadCbtExams();
-                }
-            } catch(e) {
-                console.warn("Deleted locally, server sync note:", e);
-            }
+                }).catch(e => console.warn("Server delete note:", e));
+            } catch(e) {}
         }
 
         function downloadSampleScriptJson() {
@@ -4131,6 +4203,14 @@
                 const item = allExams[idx];
                 const name = item.modelName || item.name || `Model Test #${idx + 1}`;
                 if(!confirm(`Are you sure you want to delete Model Test:\n"${name}"?\n\nThis will remove it from saved tests.`)) return;
+
+                // Blacklist this model name so it is not resurrected
+                try {
+                    let deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
+                    if(!deletedModels.includes(name)) deletedModels.push(name);
+                    localStorage.setItem('jft_deleted_model_names', JSON.stringify(deletedModels));
+                } catch(e) {}
+
                 allExams.splice(idx, 1);
                 try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
                 renderAdminModelList();

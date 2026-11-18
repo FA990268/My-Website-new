@@ -8,15 +8,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
+let inMemoryExamsCache: any[] | null = null;
 const storageFilePath = path.resolve(__dirname, '../../data/saved_cbt_exams.json');
+const tmpStoragePath = '/tmp/saved_cbt_exams.json';
 
 function loadExamsFromFile(): any[] {
+  if (inMemoryExamsCache !== null) {
+    return inMemoryExamsCache;
+  }
+  // Try /tmp first for Vercel serverless persistence
+  try {
+    if (fs.existsSync(tmpStoragePath)) {
+      const raw = fs.readFileSync(tmpStoragePath, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        inMemoryExamsCache = data;
+        return data;
+      }
+    }
+  } catch (e) {}
+
   try {
     if (fs.existsSync(storageFilePath)) {
       const raw = fs.readFileSync(storageFilePath, 'utf-8');
       const data = JSON.parse(raw);
-      if (Array.isArray(data)) return data;
-      if (typeof data === 'object' && data !== null) return Object.values(data);
+      if (Array.isArray(data)) {
+        inMemoryExamsCache = data;
+        return data;
+      }
+      if (typeof data === 'object' && data !== null) {
+        inMemoryExamsCache = Object.values(data);
+        return inMemoryExamsCache;
+      }
     }
   } catch (e) {
     console.warn('Error reading saved_cbt_exams.json:', e);
@@ -25,12 +48,19 @@ function loadExamsFromFile(): any[] {
 }
 
 function saveExamsToFile(exams: any[]) {
+  inMemoryExamsCache = exams;
+  // Try writing to /tmp
+  try {
+    fs.writeFileSync(tmpStoragePath, JSON.stringify(exams, null, 2), 'utf-8');
+  } catch (e) {}
+
+  // Try writing to static storage if directory is writable
   try {
     const dir = path.dirname(storageFilePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(storageFilePath, JSON.stringify(exams, null, 2), 'utf-8');
   } catch (e) {
-    console.error('Error saving to saved_cbt_exams.json:', e);
+    // EROFS on Vercel is expected and safely swallowed
   }
 }
 
@@ -147,7 +177,7 @@ router.delete('/exams/:id', async (req: Request, res: Response) => {
     } catch (e) {}
 
     let fileExams = loadExamsFromFile();
-    fileExams = fileExams.filter(x => x.id !== id && x.exam_id !== id);
+    fileExams = fileExams.filter(x => x.id !== id && x.exam_id !== id && x.title !== id);
     saveExamsToFile(fileExams);
 
     res.json({ success: true, deleted_id: id });
