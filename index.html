@@ -375,6 +375,9 @@
                 <button onclick="renderMockTestsView('model')" id="mock-tab-model" class="px-5 py-2.5 rounded-full text-xs font-bold transition glass-panel text-gray-300 hover:text-white hover:bg-white/10">
                     PDF Model Tests
                 </button>
+                <button onclick="syncMockTestsFromSupabase(true)" id="btn-sync-supabase" class="px-4 py-2.5 rounded-full text-xs font-bold transition bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-400/40 shadow-sm flex items-center gap-1.5" title="Fetch latest Mock Tests from Supabase Cloud Table">
+                    <span>⚡ Sync from Supabase</span>
+                </button>
                 <label for="mock-quick-upload" class="cursor-pointer px-4 py-2.5 rounded-full text-xs font-bold transition bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-400/40 shadow-sm flex items-center gap-1.5">
                     <span>📤 Upload Model Test (.json)</span>
                     <input type="file" id="mock-quick-upload" accept=".json,application/json" onchange="handleUnifiedCbtUpload(this)" class="hidden">
@@ -1515,6 +1518,7 @@
             try { await fetchNetworkInfo(); } catch(e) { console.warn("Network info fetch warning:", e); }
             try { await fetchVoices(); } catch(e) { console.warn("Voice catalog fetch warning:", e); }
             try { await loadCbtExams(); } catch(e) { console.warn("CBT exam load warning:", e); }
+            try { await syncMockTestsFromSupabase(); } catch(e) { console.warn("Supabase mock test sync note:", e); }
             try { renderHomeExams(); } catch(e) {}
             try { renderStudentCbtList(); } catch(e) {}
 
@@ -1635,6 +1639,143 @@
                 try {
                     previewUnifiedCbtStudio(allCbtExams[0]);
                 } catch(e) {}
+            }
+        }
+
+        // --- SUPABASE CLOUD SYNC FOR MOCK TESTS ---
+        const SUPABASE_CONFIG = {
+            url: 'https://xyxjoaluucliwwvprlvk.supabase.co',
+            anonKey: 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh',
+            tableName: localStorage.getItem('supabase_table_name') || 'JFT Mock Test'
+        };
+
+        async function fetchMockTestsFromSupabase() {
+            try {
+                const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${encodeURIComponent(SUPABASE_CONFIG.tableName)}?select=*`;
+                const res = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if(!res.ok) {
+                    console.warn(`Supabase REST fetch status ${res.status} for table "${SUPABASE_CONFIG.tableName}"`);
+                    return null;
+                }
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            } catch(err) {
+                console.warn("Supabase fetch error:", err);
+                return null;
+            }
+        }
+
+        async function syncMockTestsFromSupabase(showAlert = false) {
+            const btn = document.getElementById('btn-sync-supabase');
+            if(btn && showAlert) {
+                btn.innerHTML = `<span>⏳ Syncing...</span>`;
+                btn.disabled = true;
+            }
+
+            try {
+                const rows = await fetchMockTestsFromSupabase();
+                if(!rows || rows.length === 0) {
+                    if(showAlert) {
+                        alert(`Supabase Cloud Status:\nConnected to table "${SUPABASE_CONFIG.tableName}".\n\nCurrently 0 rows returned.\n(Note: If you already uploaded data, ensure Row Level Security [RLS] policy allows read access for the public/anon role in Supabase)`);
+                    }
+                    return;
+                }
+
+                let deletedModels = [];
+                let deletedCbtIds = [];
+                try {
+                    deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
+                    deletedCbtIds = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+                } catch(e) {}
+
+                let modelsUpdated = 0;
+                let cbtsUpdated = 0;
+
+                rows.forEach((row, idx) => {
+                    let parsed = null;
+                    if(typeof row.data === 'object' && row.data !== null) {
+                        parsed = { ...row.data };
+                    } else if(typeof row.data === 'string') {
+                        try { parsed = JSON.parse(row.data); } catch(e) {}
+                    }
+                    if(!parsed) parsed = {};
+
+                    const title = row.title || parsed.title || parsed.modelName || `JFT Mock Test #${idx + 1}`;
+                    const rowId = String(row.id || parsed.id || `supabase_mock_${idx + 1}`);
+
+                    // Skip deleted tests
+                    if(deletedModels.includes(title) || deletedCbtIds.includes(rowId) || deletedCbtIds.includes(title)) {
+                        return;
+                    }
+
+                    // 1. If row contains structured questions (Prometric CBT style)
+                    const qs = parsed.questions || (Array.isArray(parsed.examData) ? parsed.examData : null);
+                    if(qs && qs.length > 0 && (parsed.duration || parsed.passMark || qs[0]?.section || qs[0]?.options)) {
+                        const cbtIdx = allCbtExams.findIndex(x => x.id === rowId || x.title === title);
+                        const cbtModel = {
+                            id: rowId,
+                            title: title,
+                            duration: parsed.duration || 60,
+                            passMark: parsed.passMark || 200,
+                            questions: qs,
+                            isActive: parsed.isActive !== false,
+                            source: 'supabase'
+                        };
+                        if(cbtIdx !== -1) {
+                            allCbtExams[cbtIdx] = { ...allCbtExams[cbtIdx], ...cbtModel };
+                        } else {
+                            allCbtExams.unshift(cbtModel);
+                        }
+                        cbtsUpdated++;
+                    }
+
+                    // 2. Also make available in Model Tests (allExams)
+                    const exIdx = allExams.findIndex(x => (x.id && x.id === rowId) || (x.modelName && x.modelName === title) || (x.title && x.title === title));
+                    const modelEntry = {
+                        id: rowId,
+                        modelName: title,
+                        title: title,
+                        group: parsed.group || 'GENERAL',
+                        passMark: parsed.passMark || 200,
+                        duration: parsed.duration || 60,
+                        examData: qs || parsed.items || [],
+                        isActive: parsed.isActive !== false,
+                        source: 'supabase'
+                    };
+                    if(exIdx !== -1) {
+                        allExams[exIdx] = { ...allExams[exIdx], ...modelEntry };
+                    } else {
+                        allExams.unshift(modelEntry);
+                    }
+                    modelsUpdated++;
+                });
+
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+                try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+                try { renderAdminModelList(); } catch(e) {}
+                try { renderAdminCbtList(); } catch(e) {}
+                try { renderHomeExams(); } catch(e) {}
+                try { renderStudentCbtList(); } catch(e) {}
+                try { if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all'); } catch(e) {}
+
+                if(showAlert) {
+                    alert(`✓ Synced from Supabase table "${SUPABASE_CONFIG.tableName}"!\n\n📋 Total Rows Processed: ${rows.length}\n🖥️ CBT Exams: ${cbtsUpdated}\n📄 Model Tests: ${modelsUpdated}`);
+                }
+            } catch(err) {
+                console.error("Supabase sync failed:", err);
+                if(showAlert) alert("Supabase sync error: " + err.message);
+            } finally {
+                if(btn && showAlert) {
+                    btn.innerHTML = `<span>⚡ Sync from Supabase</span>`;
+                    btn.disabled = false;
+                }
             }
         }
 

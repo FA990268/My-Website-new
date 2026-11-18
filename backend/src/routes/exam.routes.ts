@@ -83,6 +83,47 @@ router.get('/exams', async (req: Request, res: Response) => {
 
     // 2. File fallback
     const fileExams = loadExamsFromFile();
+    if (fileExams && fileExams.length > 0) {
+      return res.json(fileExams);
+    }
+
+    // 3. Supabase Cloud table fallback
+    try {
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://xyxjoaluucliwwvprlvk.supabase.co';
+      const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh';
+      const supabaseTable = process.env.SUPABASE_TABLE || 'JFT Mock Test';
+      const sbResp = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?select=*`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      if (sbResp.ok) {
+        const rows: any = await sbResp.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          const mapped = rows.map((r: any, idx: number) => {
+            let d: any = {};
+            if (typeof r.data === 'object' && r.data !== null) d = r.data;
+            else if (typeof r.data === 'string') {
+              try { d = JSON.parse(r.data); } catch (e) {}
+            }
+            return {
+              id: String(r.id || d.id || `sb_${idx + 1}`),
+              title: r.title || d.title || `Mock Test #${idx + 1}`,
+              duration: d.duration || 60,
+              passMark: d.passMark || 200,
+              questions: d.questions || d.examData || [],
+              isActive: d.isActive !== false,
+              ...d
+            };
+          });
+          return res.json(mapped);
+        }
+      }
+    } catch (sbErr) {
+      // Continue to empty list
+    }
+
     return res.json(fileExams);
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to fetch exams', detail: err.message });
