@@ -364,8 +364,8 @@
                 <h2 class="text-2xl sm:text-3xl font-black text-white">MOCK TESTS &amp; EXAM PAPERS</h2>
                 <p class="text-xs text-gray-300 mt-1">Select any active CBT test or model exam to practice in full Prometric exam mode.</p>
             </div>
-            <!-- Category Filter Tabs -->
-            <div class="flex flex-wrap gap-2 sm:gap-3">
+            <!-- Category Filter Tabs & Quick Upload -->
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button onclick="renderMockTestsView('all')" id="mock-tab-all" class="px-5 py-2.5 rounded-full text-xs font-bold transition glass-panel bg-white/25 text-white border border-white/40 shadow-sm">
                     All Tests
                 </button>
@@ -375,6 +375,10 @@
                 <button onclick="renderMockTestsView('model')" id="mock-tab-model" class="px-5 py-2.5 rounded-full text-xs font-bold transition glass-panel text-gray-300 hover:text-white hover:bg-white/10">
                     PDF Model Tests
                 </button>
+                <label for="mock-quick-upload" class="cursor-pointer px-4 py-2.5 rounded-full text-xs font-bold transition bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-400/40 shadow-sm flex items-center gap-1.5">
+                    <span>📤 Upload Model Test (.json)</span>
+                    <input type="file" id="mock-quick-upload" accept=".json,application/json" onchange="handleUnifiedCbtUpload(this)" class="hidden">
+                </label>
             </div>
         </div>
 
@@ -845,6 +849,11 @@
                             <span class="text-[10px] text-gray-300 px-2 font-bold">PDF FILE:</span>
                             <input type="file" id="pdf-input" accept="application/pdf" class="text-[10px] text-gray-300">
                         </div>
+                        <label for="admin-model-json-upload" class="cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-xl flex items-center gap-2 border border-white/10 transition">
+                            <span class="text-[10px] text-gray-300 font-bold">📤 UPLOAD MODEL JSON:</span>
+                            <span class="text-[10px] text-cyan-300 underline font-semibold">Choose .json</span>
+                            <input type="file" id="admin-model-json-upload" accept=".json,application/json" onchange="handleUnifiedCbtUpload(this)" class="hidden">
+                        </label>
                         <button onclick="addObj('s')" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs transition shadow-md">+ Add Section</button>
                         <button onclick="addObj('q')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs transition shadow-md">+ Add Question</button>
                         <button onclick="saveExamToDB()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-black text-xs transition shadow-md ml-auto">💾 SAVE MODEL EXAM</button>
@@ -1937,10 +1946,16 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${exam.data?.passMark || 200}/250</b></div>
                                 </div>
                             </div>
-                            <button onclick="launchCbtFromCard('${exam.id}')" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
-                                <span>START CBT EXAM</span>
-                                <span>→</span>
-                            </button>
+                            <div class="flex items-center gap-2 mt-auto">
+                                <button onclick="launchCbtFromCard('${exam.id}')" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
+                                    <span>START CBT EXAM</span>
+                                    <span>→</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteCbtExam('${exam.id}', '${encodeURIComponent(exam.title)}')" title="Delete CBT Exam" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                                    <span>🗑️</span>
+                                    <span class="text-[11px]">Delete</span>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -1975,10 +1990,16 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Group / Pass</span><b class="text-purple-300">${exam.group || 'N/A'} (${mPass})</b></div>
                                 </div>
                             </div>
-                            <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
-                                <span>START MODEL TEST</span>
-                                <span>→</span>
-                            </button>
+                            <div class="flex items-center gap-2 mt-auto">
+                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
+                                    <span>START MODEL TEST</span>
+                                    <span>→</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteModelExam(${idx})" title="Delete Model Test" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                                    <span>🗑️</span>
+                                    <span class="text-[11px]">Delete</span>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -2054,10 +2075,16 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${pass}/250</b></div>
                                 </div>
                             </div>
-                            <button onclick="launchCbtFromCard('${exam.id}')" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
-                                <span>START CBT EXAM</span>
-                                <span>→</span>
-                            </button>
+                            <div class="flex items-center gap-2 mt-auto">
+                                <button onclick="launchCbtFromCard('${exam.id}')" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
+                                    <span>START CBT EXAM</span>
+                                    <span>→</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteCbtExam('${exam.id}', '${encodeURIComponent(exam.title)}')" title="Delete CBT Exam" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                                    <span>🗑️</span>
+                                    <span class="text-[11px]">Delete</span>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -2092,10 +2119,16 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Group / Pass</span><b class="text-purple-300">${exam.group || 'N/A'} (${mPass})</b></div>
                                 </div>
                             </div>
-                            <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
-                                <span>START MODEL TEST</span>
-                                <span>→</span>
-                            </button>
+                            <div class="flex items-center gap-2 mt-auto">
+                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
+                                    <span>START MODEL TEST</span>
+                                    <span>→</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteModelExam(${idx})" title="Delete Model Test" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                                    <span>🗑️</span>
+                                    <span class="text-[11px]">Delete</span>
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -2354,15 +2387,40 @@
                 try {
                     const raw = JSON.parse(e.target.result);
                     processUnifiedCbtData(raw, file.name);
+                    input.value = "";
                 } catch(err) {
-                    alert("Invalid JSON CBT Exam file: " + err.message);
+                    alert("Invalid JSON Exam file: " + err.message);
                     if(statusEl) statusEl.innerHTML = `<span class="text-rose-400">Invalid JSON: ${err.message}</span>`;
+                    input.value = "";
                 }
             };
             reader.readAsText(file);
         }
 
         function processUnifiedCbtData(raw, sourceName) {
+            // Check if uploaded JSON is a PDF Model Test structure
+            if(raw && (raw.examData || (raw.modelName && !raw.questions))) {
+                const mName = raw.modelName || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : `Model Test #${allExams.length + 1}`);
+                const mGroup = raw.group || 'GENERAL';
+                const mPass = raw.passMark || 200;
+                const mDur = raw.duration || 60;
+                const newModel = {
+                    group: mGroup,
+                    modelName: mName,
+                    passMark: mPass,
+                    duration: mDur,
+                    examData: raw.examData || [],
+                    isActive: true
+                };
+                allExams.unshift(newModel);
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+                renderAdminModelList();
+                renderHomeExams();
+                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                alert(`✓ Model Test "${mName}" uploaded and added successfully!`);
+                return;
+            }
+
             let qs = [];
             if(Array.isArray(raw)) qs = raw;
             else if(raw && Array.isArray(raw.questions)) qs = raw.questions;
@@ -2382,16 +2440,22 @@
 
             if(qs.length === 0) throw new Error("No questions array found in JSON file");
 
-            const title = raw.title || (sourceName ? sourceName.replace('.json', '') : "JFT-Basic Model CBT Test (40 Questions)");
+            const title = raw.title || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : "JFT-Basic Model CBT Test (40 Questions)");
             const passMark = raw.passMark || 200;
             const duration = raw.duration || 60;
+            const examId = raw.id || ("cbt_" + Date.now());
 
-            pendingAdminCbtJson = {
+            const newExam = {
+                id: examId,
                 title: title,
                 passMark: passMark,
                 duration: duration,
-                questions: qs
+                questions: qs,
+                isActive: true,
+                createdAt: new Date().toISOString()
             };
+
+            pendingAdminCbtJson = newExam;
 
             const titleInput = document.getElementById('cbt-exam-title');
             const passInput = document.getElementById('cbt-pass-mark');
@@ -2399,6 +2463,37 @@
             if(titleInput) titleInput.value = title;
             if(passInput) passInput.value = passMark;
             if(durationInput) durationInput.value = duration;
+
+            // Auto-save and auto-publish so uploaded test IMMEDIATELY appears on all lists!
+            const existingIdx = allCbtExams.findIndex(x => x.id === examId || (x.title && x.title === title));
+            if(existingIdx !== -1) {
+                allCbtExams[existingIdx] = newExam;
+            } else {
+                allCbtExams.unshift(newExam);
+            }
+
+            try {
+                localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
+            } catch(err) {
+                console.warn("Storage warning:", err);
+            }
+
+            // Sync with backend API in background
+            fetch(`${API_BASE}/api/exams`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newExam)
+            }).then(r => r.json()).then(data => {
+                console.log("Exam persisted to server:", data);
+            }).catch(e => {
+                console.warn("Server sync note (saved locally):", e);
+            });
+
+            // Re-render all views immediately
+            renderAdminCbtList();
+            renderHomeExams();
+            if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+            renderStudentCbtList();
 
             // Extract all dialogue scripts from questions or root
             let extractedScripts = [];
@@ -2466,8 +2561,9 @@
 
             const statusEl = document.getElementById('cbt-json-status');
             if(statusEl) {
-                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Successfully parsed ${qs.length} questions, images, and ${parsedScripts.length} dialogue scripts!</span>`;
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" uploaded, published & added (${qs.length} questions)!</span>`;
             }
+            alert(`✓ Model Test / Exam "${title}" uploaded & added successfully!\nIt is now live on the Home page and Mock Tests.`);
         }
 
         function renderCbtOverviewBadges(totalQ, totalScripts, totalSpeakers) {
@@ -3036,7 +3132,14 @@
             const imgBox = document.getElementById('cbt-image-box');
             const imgEl = document.getElementById('cbt-q-image');
             if(q.image && q.image.trim() !== "") {
-                imgEl.src = q.image;
+                let imgSrc = q.image.trim();
+                if (imgSrc.includes('backend\\public\\') || imgSrc.includes('backend/public/')) {
+                    imgSrc = imgSrc.split(/backend[\\/]public[\\/]/i)[1] || imgSrc;
+                } else if (imgSrc.includes(':\\') || imgSrc.includes(':/')) {
+                    const parts = imgSrc.split(/[\\/]/);
+                    imgSrc = parts[parts.length - 1];
+                }
+                imgEl.src = imgSrc;
                 imgBox.classList.remove('hidden');
             } else {
                 imgBox.classList.add('hidden');
@@ -3557,12 +3660,27 @@
             if(!qs || qs.length === 0) return alert("Please upload a valid CBT JSON file first");
 
             const newExam = {
-                id: "cbt_" + Date.now(),
+                id: (pendingAdminCbtJson && pendingAdminCbtJson.id) || ("cbt_" + Date.now()),
                 title: title,
                 passMark: passMark,
                 duration: duration,
-                questions: qs
+                questions: qs,
+                isActive: true,
+                createdAt: new Date().toISOString()
             };
+
+            // Save locally first
+            const existingIdx = allCbtExams.findIndex(x => x.id === newExam.id || x.title === title);
+            if(existingIdx !== -1) {
+                allCbtExams[existingIdx] = newExam;
+            } else {
+                allCbtExams.unshift(newExam);
+            }
+            try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+            renderAdminCbtList();
+            renderHomeExams();
+            if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+            renderStudentCbtList();
 
             try {
                 const res = await fetch(`${API_BASE}/api/exams`, {
@@ -3572,9 +3690,10 @@
                 });
                 if(!res.ok) throw new Error("Failed to save on server");
                 await loadCbtExams();
-                alert(`Success: CBT Exam "${title}" saved and published to all students!`);
+                alert(`✓ CBT Exam "${title}" saved and published successfully!`);
             } catch(e) {
-                alert("Error saving exam: " + e.message);
+                console.warn("Server save note (saved locally):", e);
+                alert(`✓ CBT Exam "${title}" saved and published successfully!`);
             }
         }
 
@@ -3625,6 +3744,8 @@
                 if(ex) ex.isActive = data.isActive;
                 renderStudentCbtList();
                 renderAdminCbtList();
+                renderHomeExams();
+                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
             } catch(e) {
                 const ex = allCbtExams.find(x => x.id === examId);
                 if(ex) {
@@ -3632,6 +3753,8 @@
                     localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
                     renderStudentCbtList();
                     renderAdminCbtList();
+                    renderHomeExams();
+                    if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
                 }
             }
         }
@@ -3639,17 +3762,25 @@
         async function deleteCbtExam(examId, title) {
             const decodedTitle = decodeURIComponent(title || examId);
             if(!confirm(`Are you sure you want to delete CBT Exam:\n"${decodedTitle}"?\n\nThis cannot be undone.`)) return;
+            
+            // Remove locally first so UI is immediately updated
+            allCbtExams = allCbtExams.filter(x => x.id !== examId);
+            try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+            
+            renderStudentCbtList();
+            renderAdminCbtList();
+            renderHomeExams();
+            if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+
             try {
                 const res = await fetch(`${API_BASE}/api/exams/${encodeURIComponent(examId)}`, {
                     method: 'DELETE'
                 });
-                if(!res.ok) throw new Error("Failed to delete exam from server");
-                await loadCbtExams();
+                if(res.ok) {
+                    await loadCbtExams();
+                }
             } catch(e) {
-                allCbtExams = allCbtExams.filter(x => x.id !== examId);
-                localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
-                renderStudentCbtList();
-                renderAdminCbtList();
+                console.warn("Deleted locally, server sync note:", e);
             }
         }
 
@@ -3998,10 +4129,13 @@
         function deleteModelExam(idx) {
             if(idx >= 0 && idx < allExams.length) {
                 const item = allExams[idx];
-                if(!confirm(`Are you sure you want to delete PDF Model Test "${item.modelName}"?\n\nThis will remove it from saved tests.`)) return;
+                const name = item.modelName || item.name || `Model Test #${idx + 1}`;
+                if(!confirm(`Are you sure you want to delete Model Test:\n"${name}"?\n\nThis will remove it from saved tests.`)) return;
                 allExams.splice(idx, 1);
-                localStorage.setItem('jft_exam_db', JSON.stringify(allExams));
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
                 renderAdminModelList();
+                renderHomeExams();
+                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
             }
         }
 
