@@ -4,9 +4,6 @@ node_modules/
 backend/node_modules/
 
 # Production Build Artifacts
-dist/
-*/dist/
-backend/dist/
 build/
 .vercel/
 
