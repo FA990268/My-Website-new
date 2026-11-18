@@ -1402,16 +1402,34 @@
                 return url;
             }
             const fn = url.split('/').pop().trim();
-            // Single-letter stock audios (a.mp3 through i.mp3) are physically stored as A.mp3 on Vercel/Git
+
+            // 1. Stock single-letter audio (a.mp3 through i.mp3) physically stored as A.mp3 in assets/
             if(/^[a-iA-I]\.mp3$/i.test(fn)) {
                 return `assets/${fn.toUpperCase()}`;
             }
-            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
-                return `audio/${fn}`;
+
+            // 2. Dedicated API audio route (/api/audio/...)
+            if(url.startsWith('/api/audio/') || url.startsWith('api/audio/')) {
+                const clean = url.startsWith('/') ? url : `/${url}`;
+                return `${API_BASE}${clean}`;
             }
+
+            // 3. Audio routes (/audio/...)
+            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
+                return `${API_BASE}/audio/${fn}`;
+            }
+
+            // 4. Unique turn audio files (turn_<id>_<hash>.mp3)
+            if(fn.startsWith('turn_')) {
+                return `${API_BASE}/api/audio/${fn}`;
+            }
+
+            // 5. Assets directory (/assets/...)
             if(url.startsWith('/assets/') || url.startsWith('assets/')) {
                 return url.startsWith('/') ? url.slice(1) : url;
             }
+
+            // 6. General fallback
             return `assets/${url.startsWith('/') ? url.slice(1) : url}`;
         }
 
@@ -2759,7 +2777,8 @@
                 const card = document.createElement('div');
                 card.className = "glass-panel p-6 border border-white/10";
                 
-                const initialAudioUrl = resolveAudioUrl(`/audio/${s.targetAudio}`);
+                const masterPath = (s.masterAudio && s.masterAudio.audioUrl) ? s.masterAudio.audioUrl : (s.targetAudio ? `/audio/${s.targetAudio}` : '');
+                const initialAudioUrl = resolveAudioUrl(masterPath);
                 let masterPlayerHtml = `
                     <div id="master-player-${s.id}" class="mt-4 p-4 bg-sky-950/40 border border-sky-400/30 rounded-xl flex flex-wrap justify-between items-center gap-4">
                         <div class="flex items-center gap-3">

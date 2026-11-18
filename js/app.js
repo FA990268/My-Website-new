@@ -8,10 +8,42 @@
             ? ''
             : 'http://localhost:8000';
 
-        function resolveAudioUrl(url) {
-            if(!url) return '';
-            if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) return url;
-            return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+        function resolveAudioUrl(rawUrl) {
+            if(!rawUrl || typeof rawUrl !== 'string') return '';
+            let url = rawUrl.trim().replace(/\\/g, '/');
+            if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+                return url;
+            }
+            const fn = url.split('/').pop().trim();
+
+            // 1. Stock single-letter audio (a.mp3 through i.mp3) physically stored as A.mp3 in assets/
+            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                return `assets/${fn.toUpperCase()}`;
+            }
+
+            // 2. Dedicated API audio route (/api/audio/...)
+            if(url.startsWith('/api/audio/') || url.startsWith('api/audio/')) {
+                const clean = url.startsWith('/') ? url : `/${url}`;
+                return `${API_BASE}${clean}`;
+            }
+
+            // 3. Audio routes (/audio/...)
+            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
+                return `${API_BASE}/audio/${fn}`;
+            }
+
+            // 4. Unique turn audio files (turn_<id>_<hash>.mp3)
+            if(fn.startsWith('turn_')) {
+                return `${API_BASE}/api/audio/${fn}`;
+            }
+
+            // 5. Assets directory (/assets/...)
+            if(url.startsWith('/assets/') || url.startsWith('assets/')) {
+                return url.startsWith('/') ? url.slice(1) : url;
+            }
+
+            // 6. General fallback
+            return `assets/${url.startsWith('/') ? url.slice(1) : url}`;
         }
 
         let allCbtExams = [];
