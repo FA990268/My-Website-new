@@ -2768,6 +2768,7 @@
                 let turnsHtml = s.dialogues.map((turn, tIdx) => {
                     const spkConf = speakerVoiceMap[turn.speaker] || detectSpeakerVoice(turn.speaker);
                     const icon = spkConf.role_category === 'boy' ? '👦' : (spkConf.role_category === 'girl' ? '👧' : (spkConf.role_category === 'female' ? '👩' : '👨'));
+                    const turnAudioUrl = turn.turn_audio_url || turn.audioUrl || '';
                     return `
                         <div id="turn-card-${turn.id}" class="p-3.5 bg-white/5 border border-white/10 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition">
                             <div class="flex items-start gap-3 flex-1">
@@ -2776,12 +2777,13 @@
                                     <div class="flex items-center gap-2">
                                         <span class="font-bold text-white text-xs">${turn.speaker}</span>
                                         <span class="text-[10px] bg-white/10 text-cyan-300 px-2 py-0.5 rounded font-mono">${turn.id}</span>
+                                        ${turnAudioUrl ? `<span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">Audio Bound</span>` : ''}
                                     </div>
                                     <div class="text-sm text-gray-100 mt-1 font-medium">${turn.text}</div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="playDirectTurnAudio('${turn.id}', '${encodeURIComponent(turn.text)}', '${turn.speaker}')" class="bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold border border-cyan-400/30 flex items-center gap-1.5 transition">
+                                <button onclick="playDirectTurnAudio('${turn.id}', '${encodeURIComponent(turn.text)}', '${turn.speaker}', '${turnAudioUrl}')" class="bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold border border-cyan-400/30 flex items-center gap-1.5 transition">
                                     <span>▶ Play Line</span>
                                 </button>
                                 <span id="turn-audio-status-${turn.id}" class="text-[10px] text-gray-500"></span>
@@ -2808,11 +2810,26 @@
         }
 
         // Direct in-browser playback for single turn without downloading
-        async function playDirectTurnAudio(turnId, encodedText, speaker) {
+        async function playDirectTurnAudio(turnId, encodedText, speaker, existingAudioUrl) {
             const text = decodeURIComponent(encodedText);
             const conf = speakerVoiceMap[speaker] || detectSpeakerVoice(speaker);
             const statusEl = document.getElementById(`turn-audio-status-${turnId}`);
             const cardEl = document.getElementById(`turn-card-${turnId}`);
+
+            if(existingAudioUrl) {
+                const audio = document.getElementById('global-turn-audio');
+                audio.src = resolveAudioUrl(existingAudioUrl);
+                audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
+
+                document.querySelectorAll('[id^="turn-card-"]').forEach(el => el.classList.remove('playing-turn'));
+                if(cardEl) cardEl.classList.add('playing-turn');
+                if(statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold">🔊 Playing</span>`;
+                audio.onended = () => {
+                    if(cardEl) cardEl.classList.remove('playing-turn');
+                    if(statusEl) statusEl.innerHTML = `<span class="text-gray-400">Done</span>`;
+                };
+                return;
+            }
             
             if(statusEl) statusEl.innerHTML = `<span class="text-cyan-400 font-bold">Synthesizing...</span>`;
 
@@ -2821,6 +2838,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        id: turnId,
                         text: text,
                         voice_id: conf.voice_id,
                         speaker: speaker
@@ -2935,31 +2953,27 @@
                 }
 
                 synthesizedScripts = data.scripts || [];
-
-                // Update master players on each script card
-                synthesizedScripts.forEach(s => {
-                    const ctrl = document.getElementById(`master-audio-ctrl-${s.id}`);
-                    if(ctrl && s.masterAudio) {
-                        const directUrl = resolveAudioUrl(s.masterAudio.audioUrl);
-                        ctrl.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <audio controls src="${directUrl}" class="h-9 w-64"></audio>
-                                <a href="${directUrl}" target="_blank" class="text-xs text-sky-400 hover:text-white underline">Direct URL</a>
-                            </div>
-                        `;
-                    }
-                });
+                parsedScripts = synthesizedScripts;
+                try { renderParsedScriptsView(); } catch(e) {}
 
                 // Bind to CBT questions in pendingAdminCbtJson
                 let boundCount = 0;
                 if(pendingAdminCbtJson && pendingAdminCbtJson.questions) {
-                    pendingAdminCbtJson.questions.forEach(q => {
-                        if(q.audio) {
-                            const matched = synthesizedScripts.find(s => s.targetAudio === q.audio || s.id === q.audio || `${s.id}.mp3` === q.audio);
-                            if(matched && matched.masterAudio) {
-                                q.audio = matched.masterAudio.audioUrl;
-                                boundCount++;
+                    pendingAdminCbtJson.questions.forEach((q, qIdx) => {
+                        const matched = synthesizedScripts.find(s => 
+                            s.qIndex === qIdx ||
+                            s.id === q.dialogueId ||
+                            s.dialogueId === q.dialogueId ||
+                            s.targetAudio === q.audio ||
+                            s.id === q.audio ||
+                            (q.audio && q.audio.includes(s.targetAudio))
+                        );
+                        if(matched && matched.masterAudio) {
+                            q.audio = matched.masterAudio.audioUrl;
+                            if(matched.dialogues && matched.dialogues.length > 0) {
+                                q.dialogues = matched.dialogues;
                             }
+                            boundCount++;
                         }
                     });
                 }

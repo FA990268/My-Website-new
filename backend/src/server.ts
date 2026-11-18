@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import { testConnection } from './database/connection.js';
@@ -40,8 +41,35 @@ if (fs.existsSync(publicDir)) {
 }
 app.use('/assets', express.static(path.resolve(__dirname, '../public/assets')));
 app.use('/assets', express.static(path.resolve(__dirname, '../../assets')));
+app.use('/audio', express.static(path.resolve(__dirname, '../public/assets/audio')));
+app.use('/audio', express.static(path.resolve(__dirname, '../../assets/audio')));
 app.use('/data', express.static(path.resolve(__dirname, '../../data')));
 app.use('/data', express.static(path.resolve(__dirname, '../data')));
+
+// Dedicated Audio Serving Handlers (supports /audio, /assets/audio, /api/audio)
+app.get(['/audio/:filename', '/assets/audio/:filename', '/api/audio/:filename'], (req: Request, res: Response, next) => {
+  const rawParam = req.params.filename;
+  const filename = path.basename(Array.isArray(rawParam) ? rawParam[0] : (rawParam || ''));
+  const searchDirs = [
+    path.resolve(process.cwd(), 'public/assets/audio'),
+    path.resolve(process.cwd(), 'assets/audio'),
+    path.resolve(__dirname, '../../public/assets/audio'),
+    path.resolve(__dirname, '../../assets/audio'),
+    path.resolve(__dirname, '../public/assets/audio'),
+    path.resolve(__dirname, '../public/assets'),
+    path.resolve(__dirname, '../../assets'),
+    path.resolve(os.tmpdir(), 'cbt_audio')
+  ];
+  for (const dir of searchDirs) {
+    const fullPath = path.join(dir, filename);
+    if (fs.existsSync(fullPath)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.sendFile(fullPath);
+    }
+  }
+  next();
+});
 
 /* -------------------------------------------------------------------------
  * Root & Frontend Delivery Route
