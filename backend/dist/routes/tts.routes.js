@@ -6,6 +6,7 @@ import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -149,11 +150,36 @@ export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural
     const baseVoice = cfg.base_voice || voiceId || 'ja-JP-NanamiNeural';
     const effPitch = pitch + (cfg.pitch_offset || 0);
     const effRate = Math.round((rate - 1.0) * 100) + (cfg.rate_offset || 0);
-    // Strategy 1: Python edge-tts CLI execution (High fidelity neural Japanese voices)
+    const pitchStr = `${effPitch >= 0 ? '+' : ''}${effPitch}Hz`;
+    const rateStr = `${effRate >= 0 ? '+' : ''}${effRate}%`;
+    // Strategy 1: Pure Node.js Microsoft Edge Neural TTS (Native multi-speaker Japanese voices)
+    try {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(baseVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        const audioStream = tts.toStream(text, { pitch: pitchStr, rate: rateStr }).audioStream;
+        const buf = await new Promise((resolve, reject) => {
+            const chunks = [];
+            const timer = setTimeout(() => reject(new Error("MsEdgeTTS timeout")), 12000);
+            audioStream.on('data', (chunk) => chunks.push(chunk));
+            audioStream.on('end', () => {
+                clearTimeout(timer);
+                resolve(Buffer.concat(chunks));
+            });
+            audioStream.on('error', (err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+        });
+        if (buf && buf.length > 0) {
+            return buf;
+        }
+    }
+    catch (edgeErr) {
+        console.warn("MsEdgeTTS Node execution note, trying secondary:", edgeErr?.message);
+    }
+    // Strategy 2: Python edge-tts CLI execution (High fidelity neural Japanese voices)
     try {
         const tempMp3 = path.join(os.tmpdir(), `tts_${crypto.randomUUID()}.mp3`);
-        const rateStr = `${effRate >= 0 ? '+' : ''}${effRate}%`;
-        const pitchStr = `${effPitch >= 0 ? '+' : ''}${effPitch}Hz`;
         await execFileAsync('python', [
             '-m', 'edge_tts',
             '--voice', baseVoice,
@@ -173,9 +199,9 @@ export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural
         }
     }
     catch (pyErr) {
-        // Python not installed or edge_tts error, fallback seamlessly to Google TTS
+        // Python not installed or edge_tts error
     }
-    // Strategy 2: Google Translate TTS audio fetch (Universal zero-dependency network fallback)
+    // Strategy 3: Google Translate TTS audio fetch (Emergency fallback)
     try {
         const lang = baseVoice.startsWith('en') ? 'en' : 'ja';
         const chunks = text.length <= 160 ? [text] : text.match(/.{1,150}([。！？\n\s]|$)/g) || [text];
