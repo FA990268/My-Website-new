@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "vercel-build": "tsc",
+    "postinstall": "node scripts/patch-msedge-tts.cjs",
+    "build": "node scripts/patch-msedge-tts.cjs && tsc",
+    "vercel-build": "node scripts/patch-msedge-tts.cjs && tsc",
     "start": "node dist/server.js",
     "db:migrate": "tsx src/database/migrate.ts",
     "db:seed": "tsx src/database/seed.ts"

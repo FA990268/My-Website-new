@@ -60,8 +60,8 @@ export const CUSTOM_VOICES: Record<string, any> = {
   },
   "ja-JP-AoiNeural": {
     base_voice: "ja-JP-NanamiNeural",
-    pitch_offset: -4,
-    rate_offset: -2,
+    pitch_offset: 0,
+    rate_offset: 0,
     name: "Aoi (葵)",
     gender: "Female",
     role_category: "female",
@@ -70,8 +70,8 @@ export const CUSTOM_VOICES: Record<string, any> = {
   },
   "Aoi": {
     base_voice: "ja-JP-NanamiNeural",
-    pitch_offset: -4,
-    rate_offset: -2,
+    pitch_offset: 0,
+    rate_offset: 0,
     name: "Aoi (葵)",
     gender: "Female",
     role_category: "female",
@@ -80,8 +80,8 @@ export const CUSTOM_VOICES: Record<string, any> = {
   },
   "aoi": {
     base_voice: "ja-JP-NanamiNeural",
-    pitch_offset: -4,
-    rate_offset: -2,
+    pitch_offset: 0,
+    rate_offset: 0,
     name: "Aoi (葵)",
     gender: "Female",
     role_category: "female",
@@ -201,7 +201,34 @@ export async function synthesizeSpeechBuffer(
   const pitchStr = `${effPitch >= 0 ? '+' : ''}${effPitch}Hz`;
   const rateStr = `${effRate >= 0 ? '+' : ''}${effRate}%`;
 
-  // Strategy 1: Python edge-tts CLI execution (Primary high fidelity neural Keita and Aoi voices, fast ~1s)
+  // Strategy 1: High-Fidelity Microsoft Edge Neural TTS in Node.js (24kHz 96kbps Crystal-Clear Studio MP3)
+  try {
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(baseVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    const audioStream = tts.toStream(text, { pitch: pitchStr, rate: rateStr }).audioStream;
+    
+    const buf = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const timer = setTimeout(() => reject(new Error("MsEdgeTTS timeout")), 8000);
+      audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      audioStream.on('end', () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on('error', (err: any) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+
+    if (buf && buf.length > 0) {
+      return buf;
+    }
+  } catch (edgeErr: any) {
+    console.warn("Primary Node Edge TTS note, checking python edge-tts:", edgeErr?.message);
+  }
+
+  // Strategy 2: Python edge-tts CLI execution (High fidelity neural Japanese voices)
   try {
     const tempMp3 = path.join(os.tmpdir(), `tts_${crypto.randomUUID()}.mp3`);
 
@@ -221,33 +248,6 @@ export async function synthesizeSpeechBuffer(
     }
   } catch (pyErr) {
     // Python not installed or edge_tts error, fallback
-  }
-
-  // Strategy 2: Pure Node.js Microsoft Edge Neural TTS
-  try {
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(baseVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const audioStream = tts.toStream(text, { pitch: pitchStr, rate: rateStr }).audioStream;
-    
-    const buf = await new Promise<Buffer>((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const timer = setTimeout(() => reject(new Error("MsEdgeTTS timeout")), 4000);
-      audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      audioStream.on('end', () => {
-        clearTimeout(timer);
-        resolve(Buffer.concat(chunks));
-      });
-      audioStream.on('error', (err: any) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-    });
-
-    if (buf && buf.length > 0) {
-      return buf;
-    }
-  } catch (edgeErr: any) {
-    console.warn("MsEdgeTTS Node execution note, trying Google TTS fallback:", edgeErr?.message);
   }
 
   // Strategy 3: Google Translate TTS audio fetch (Emergency fallback)
