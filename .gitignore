@@ -30,3 +30,6 @@ Thumbs.db
 .vscode/
 .idea/
 ~$*
+
+# Large raw archive directories
+assets/*_audio_all/

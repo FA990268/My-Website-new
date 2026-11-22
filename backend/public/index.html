@@ -1135,10 +1135,13 @@
                         <span id="cbt-audio-plays" class="text-[11px] sm:text-xs font-bold bg-sky-200 text-sky-900 px-2 sm:px-2.5 py-0.5 rounded-full">Played: 0 / 2</span>
                     </div>
                     <audio id="cbt-audio-player" controls class="w-full h-10 sm:h-11 mb-1.5"></audio>
-                    <div class="text-[10px] sm:text-[11px] text-sky-700 flex justify-between">
-                        <span>Multi-Speaker Continuous Audio</span>
-                        <span>Click ▶ to play in browser</span>
+                    <div class="text-[10px] sm:text-[11px] text-sky-700 flex justify-between items-center">
+                        <span id="cbt-audio-caption">Multi-Speaker Continuous Audio</span>
+                        <button id="cbt-dialogue-speech-btn" type="button" onclick="playCbtDialogueSpeech()" class="hidden px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold text-[11px] shadow transition flex items-center gap-1">
+                            <span>▶ Play Dialogue Audio</span>
+                        </button>
                     </div>
+                    <div id="cbt-speech-speaker-indicator" class="hidden text-xs font-bold text-sky-900 mt-2 bg-sky-100/90 p-2 sm:p-2.5 rounded-xl border border-sky-300 flex items-center gap-2"></div>
                 </div>
             </div>
 
@@ -1401,33 +1404,37 @@
         function resolveAudioUrl(rawUrl) {
             if(!rawUrl || typeof rawUrl !== 'string') return '';
             let url = rawUrl.trim().replace(/\\/g, '/');
+
+            // 0. Ensure standard MP3 audio/mpeg MIME type for cross-browser data URIs
+            if(url.startsWith('data:audio/mp3;')) {
+                url = 'data:audio/mpeg;' + url.substring('data:audio/mp3;'.length);
+            }
             if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
                 return url;
             }
 
-            // 1. Dedicated API Audio Endpoint (/api/audio/...) MUST take top priority
+            const fn = url.split('/').pop().trim();
+            const lowerFn = fn.toLowerCase();
+
+            // 1. Synthesized multi-speaker dialogue audio files (dialogue_a.mp3 .. dialogue_l.mp3)
+            if(lowerFn.startsWith('dialogue_')) {
+                return `assets/audio/${lowerFn}`;
+            }
+
+            // 2. Audio_X official audio files (q21.mp3 .. q30.mp3 or assets/audio_x/...)
+            if(url.includes('audio_x') || /^q\d+\.mp3$/i.test(fn)) {
+                return `assets/audio_x/${lowerFn}`;
+            }
+
+            // 3. Stock single-letter audio (a.mp3 .. i.mp3)
+            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
+                return `assets/audio/${fn.toUpperCase()}`;
+            }
+
+            // 4. Dedicated API Audio Endpoint (/api/audio/...)
             if(url.startsWith('/api/audio/') || url.startsWith('api/audio/')) {
                 const clean = url.startsWith('/') ? url : `/${url}`;
                 return `${API_BASE}${clean}`;
-            }
-
-            // 2. Synthesized dialogue and turn audio files
-            const fn = url.split('/').pop().trim();
-            if(fn.startsWith('turn_') || fn.startsWith('dialogue_')) {
-                return `${API_BASE}/api/audio/${fn}`;
-            }
-
-            // 3. Dedicated audio folder routes (/audio/...)
-            if(url.startsWith('/audio/') || url.startsWith('audio/')) {
-                if(/^[a-iA-I]\.mp3$/i.test(fn)) {
-                    return `assets/${fn.toUpperCase()}`;
-                }
-                return `${API_BASE}/audio/${fn}`;
-            }
-
-            // 4. Stock single-letter audio (a.mp3 .. i.mp3)
-            if(/^[a-iA-I]\.mp3$/i.test(fn)) {
-                return `assets/${fn.toUpperCase()}`;
             }
 
             // 5. Assets static directory (/assets/...)
@@ -1436,7 +1443,7 @@
             }
 
             // 6. General fallback
-            return `assets/${url.startsWith('/') ? url.slice(1) : url}`;
+            return `assets/audio/${fn}`;
         }
 
         function resolveExamImageUrl(rawUrl) {
@@ -1515,6 +1522,7 @@
             try { renderGroupOptions(); } catch(e) {}
             try { renderAdminModelList(); } catch(e) {}
             try { checkStoredBg(); } catch(e) {}
+            try { await fetchSiteSettingsFromSupabase(); } catch(e) { console.warn("Supabase site settings load note:", e); }
             try { await fetchNetworkInfo(); } catch(e) { console.warn("Network info fetch warning:", e); }
             try { await fetchVoices(); } catch(e) { console.warn("Voice catalog fetch warning:", e); }
             try { await loadCbtExams(); } catch(e) { console.warn("CBT exam load warning:", e); }
@@ -1629,6 +1637,21 @@
                 allCbtExams = localExams.filter(e => !deletedIds.includes(e.id) && !(e.title && deletedIds.includes(e.title)));
             }
 
+            // Auto-load JFT Model Test 8 (07.json) with verified multi-speaker dialogue audio if not present
+            const hasModel8 = allCbtExams.some(e => e.title && (e.title.includes('Test 8') || e.title.includes('Model Test 8')));
+            if(!hasModel8 && !deletedIds.includes('07') && !deletedIds.includes('07_model_test_8')) {
+                try {
+                    const r07 = await fetch('07.json');
+                    if(r07.ok) {
+                        const d07 = await r07.json();
+                        if(d07 && d07.questions && d07.questions.length > 0) {
+                            d07.id = '07_model_test_8';
+                            allCbtExams.push(d07);
+                        }
+                    }
+                } catch(e) {}
+            }
+
             try { renderStudentCbtList(); } catch(e) {}
             try { renderAdminCbtList(); } catch(e) {}
             try { renderHomeExams(); } catch(e) {}
@@ -1642,11 +1665,14 @@
             }
         }
 
-        // --- SUPABASE CLOUD SYNC FOR MOCK TESTS ---
+        // --- SUPABASE CLOUD SYNC & STORAGE ---
         const SUPABASE_CONFIG = {
             url: 'https://xyxjoaluucliwwvprlvk.supabase.co',
             anonKey: 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh',
-            tableName: localStorage.getItem('supabase_table_name') || 'JFT Mock Test'
+            tableName: localStorage.getItem('supabase_table_name') || 'JFT Mock Test',
+            settingsTable: 'site_settings',
+            carouselBucket: 'carousel-images',
+            backgroundBucket: 'site-backgrounds'
         };
 
         async function fetchMockTestsFromSupabase() {
@@ -1776,6 +1802,189 @@
                     btn.innerHTML = `<span>⚡ Sync from Supabase</span>`;
                     btn.disabled = false;
                 }
+            }
+        }
+
+        async function saveExamToSupabase(examPayload) {
+            if(!examPayload || (!examPayload.title && !examPayload.modelName)) return;
+            try {
+                const title = (examPayload.title || examPayload.modelName || 'Untitled Exam').trim();
+                const url = `${SUPABASE_CONFIG.url}/rest/v1/${encodeURIComponent(SUPABASE_CONFIG.tableName)}`;
+                
+                // Check if row exists by title
+                const checkRes = await fetch(`${url}?title=eq.${encodeURIComponent(title)}&select=id`, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`
+                    }
+                });
+                const existing = checkRes.ok ? await checkRes.json() : [];
+                
+                if(Array.isArray(existing) && existing.length > 0) {
+                    await fetch(`${url}?id=eq.${existing[0].id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            data: examPayload
+                        })
+                    });
+                    console.log(`Updated exam "${title}" in Supabase table "${SUPABASE_CONFIG.tableName}".`);
+                } else {
+                    await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            data: examPayload
+                        })
+                    });
+                    console.log(`Inserted exam "${title}" into Supabase table "${SUPABASE_CONFIG.tableName}".`);
+                }
+            } catch(err) {
+                console.warn("Error saving exam to Supabase:", err);
+            }
+        }
+
+        async function deleteExamFromSupabase(examId, title) {
+            try {
+                const url = `${SUPABASE_CONFIG.url}/rest/v1/${encodeURIComponent(SUPABASE_CONFIG.tableName)}`;
+                if(title) {
+                    await fetch(`${url}?title=eq.${encodeURIComponent(title)}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`
+                        }
+                    });
+                }
+                if(examId && !isNaN(examId)) {
+                    await fetch(`${url}?id=eq.${examId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`
+                        }
+                    });
+                }
+            } catch(e) {
+                console.warn("Supabase delete error:", e);
+            }
+        }
+
+        async function uploadFileToSupabaseStorage(bucket, file, customName) {
+            if(!file) return null;
+            const safeName = (customName || file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const fileName = `${Date.now()}_${safeName}`;
+            const uploadUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/${bucket}/${fileName}`;
+
+            try {
+                const res = await fetch(uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                        'Content-Type': file.type || 'image/jpeg',
+                        'x-upsert': 'true'
+                    },
+                    body: file
+                });
+
+                if(res.ok) {
+                    const publicUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${bucket}/${fileName}`;
+                    console.log(`Uploaded to Supabase Storage bucket "${bucket}": ${publicUrl}`);
+                    return publicUrl;
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    console.warn(`Supabase Storage upload returned ${res.status}:`, errData);
+                    return null;
+                }
+            } catch(err) {
+                console.warn(`Supabase Storage upload error for bucket "${bucket}":`, err);
+                return null;
+            }
+        }
+
+        async function saveSiteSettingsToSupabase(partialSettings) {
+            try {
+                const url = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.settingsTable}`;
+                const patchRes = await fetch(`${url}?id=eq.global_config`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({
+                        ...partialSettings,
+                        updated_at: new Date().toISOString()
+                    })
+                });
+
+                const patchData = patchRes.ok ? await patchRes.json() : [];
+                if(!patchRes.ok || !patchData || patchData.length === 0) {
+                    await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify({
+                            id: 'global_config',
+                            ...partialSettings,
+                            updated_at: new Date().toISOString()
+                        })
+                    });
+                }
+                console.log("Site settings synced to Supabase:", partialSettings);
+            } catch(e) {
+                console.warn("Supabase site settings save note:", e);
+            }
+        }
+
+        async function fetchSiteSettingsFromSupabase() {
+            try {
+                const url = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.settingsTable}?id=eq.global_config&select=*`;
+                const res = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`
+                    }
+                });
+                if(res.ok) {
+                    const rows = await res.json();
+                    if(Array.isArray(rows) && rows.length > 0) {
+                        const cfg = rows[0];
+                        if(cfg.background_url) {
+                            document.body.style.backgroundImage = `url('${cfg.background_url}')`;
+                            localStorage.setItem('exam_global_bg', cfg.background_url);
+                        }
+                        if(cfg.background_transparency !== null && cfg.background_transparency !== undefined) {
+                            updateGlassOpacity(cfg.background_transparency, false);
+                        }
+                        if(Array.isArray(cfg.carousel_slides) && cfg.carousel_slides.length > 0) {
+                            homeSlides = cfg.carousel_slides;
+                            saveSlidesToStorage();
+                            renderHomeSlider();
+                            renderAdminSliderManager();
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn("Could not fetch site settings from Supabase:", e);
             }
         }
 
@@ -2420,7 +2629,7 @@
             `).join('');
         }
 
-        function addSliderSlideFromAdmin() {
+        async function addSliderSlideFromAdmin() {
             const fileInput = document.getElementById('admin-slide-file');
             const urlInput = document.getElementById('admin-slide-url');
             const titleInput = document.getElementById('admin-slide-title');
@@ -2430,50 +2639,48 @@
             const subtitle = subInput.value.trim() || "Japanese Language & Visa Consultancy";
 
             const file = fileInput.files[0];
+            let slideUrl = urlInput.value.trim();
+
             if(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    homeSlides.push({
-                        url: e.target.result,
-                        title: title,
-                        subtitle: subtitle,
-                        badge: "DAI ICHI ACADEMY"
+                // Try uploading directly to Supabase Storage dedicated bucket
+                slideUrl = await uploadFileToSupabaseStorage(SUPABASE_CONFIG.carouselBucket, file, file.name);
+
+                // Graceful fallback to FileReader DataURL if storage upload encountered network/RLS issues
+                if(!slideUrl) {
+                    slideUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
                     });
-                    saveSlidesToStorage();
-                    fileInput.value = "";
-                    urlInput.value = "";
-                    titleInput.value = "";
-                    subInput.value = "";
-                    renderAdminSliderManager();
-                    renderHomeSlider();
-                    alert("Slide added successfully to Home Carousel!");
-                };
-                reader.readAsDataURL(file);
-                return;
+                }
             }
 
-            const url = urlInput.value.trim();
-            if(!url) {
+            if(!slideUrl) {
                 alert("Please upload an image file or enter an image URL.");
                 return;
             }
 
             homeSlides.push({
-                url: url,
+                url: slideUrl,
                 title: title,
                 subtitle: subtitle,
                 badge: "DAI ICHI ACADEMY"
             });
             saveSlidesToStorage();
+            fileInput.value = "";
             urlInput.value = "";
             titleInput.value = "";
             subInput.value = "";
             renderAdminSliderManager();
             renderHomeSlider();
-            alert("Slide added successfully to Home Carousel!");
+
+            // Persist slides to Supabase configuration table
+            await saveSiteSettingsToSupabase({ carousel_slides: homeSlides });
+
+            alert("✓ Slide added to Home Carousel and synchronized to Supabase globally!");
         }
 
-        function deleteCustomSliderImage(idx) {
+        async function deleteCustomSliderImage(idx) {
             if(!confirm(`Delete slide #${idx+1}?`)) return;
             homeSlides.splice(idx, 1);
             if(homeSlides.length === 0) {
@@ -2483,15 +2690,22 @@
             saveSlidesToStorage();
             renderAdminSliderManager();
             renderHomeSlider();
+
+            // Sync updated slides to Supabase configuration table
+            await saveSiteSettingsToSupabase({ carousel_slides: homeSlides });
         }
 
-        function resetDefaultSlides() {
+        async function resetDefaultSlides() {
             if(!confirm("Reset Home Carousel to the 4 default slides?")) return;
             homeSlides = [...DEFAULT_HERO_SLIDES];
             currentSlideIdx = 0;
             saveSlidesToStorage();
             renderAdminSliderManager();
             renderHomeSlider();
+
+            // Sync default slides to Supabase configuration table
+            await saveSiteSettingsToSupabase({ carousel_slides: homeSlides });
+            alert("✓ Home Carousel reset and synced globally!");
         }
 
         function saveSlidesToStorage() {
@@ -2745,12 +2959,19 @@
                 renderAdminModelList();
                 renderHomeExams();
                 if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-                if(isUserUpload) alert(`✓ Model Test "${mName}" uploaded and added successfully!`);
+                
+                // Automatically save & sync to Supabase table
+                saveExamToSupabase(newModel);
+
+                if(isUserUpload) alert(`✓ Model Test "${mName}" uploaded and synced to Supabase!`);
                 return;
             }
 
             previewUnifiedCbtStudio(raw, sourceName);
             if(!pendingAdminCbtJson) return;
+
+            // Automatically sync parsed exam questions to Supabase table
+            saveExamToSupabase(pendingAdminCbtJson);
 
             const title = pendingAdminCbtJson.title || "Uploaded Exam";
             const qCount = pendingAdminCbtJson.questions ? pendingAdminCbtJson.questions.length : 0;
@@ -3426,6 +3647,129 @@
             navigateCbtQuestion(idx);
         }
 
+        let isCbtDialoguePlaying = false;
+
+        function stopCbtDialogueSpeech() {
+            isCbtDialoguePlaying = false;
+            if('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
+            const indicator = document.getElementById('cbt-speech-speaker-indicator');
+            if(indicator) indicator.classList.add('hidden');
+            const playBtn = document.getElementById('cbt-dialogue-speech-btn');
+            if(playBtn) playBtn.innerHTML = `<span>▶ Play Dialogue Audio</span>`;
+        }
+
+        function playCbtDialogueSpeech() {
+            const q = cbtQuestions[cbtCurrentIdx];
+            if(!q) return;
+            const dialogues = (q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
+                            : ((q.dialog && Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog : null);
+            if(!dialogues || dialogues.length === 0) return;
+
+            const qKey = q.id || `q_${cbtCurrentIdx}`;
+            const plays = cbtAudioPlays[qKey] || 0;
+            if(plays >= 2) {
+                alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
+                return;
+            }
+
+            if(isCbtDialoguePlaying) {
+                stopCbtDialogueSpeech();
+                return;
+            }
+
+            // Pause standard audio element if playing
+            const audioPlayer = document.getElementById('cbt-audio-player');
+            if(audioPlayer) audioPlayer.pause();
+
+            isCbtDialoguePlaying = true;
+            const indicator = document.getElementById('cbt-speech-speaker-indicator');
+            const playBtn = document.getElementById('cbt-dialogue-speech-btn');
+            if(playBtn) playBtn.innerHTML = `<span>⏸ Pause Audio</span>`;
+
+            let lineIndex = 0;
+
+            function playNextLine() {
+                if(!isCbtDialoguePlaying || lineIndex >= dialogues.length) {
+                    isCbtDialoguePlaying = false;
+                    cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
+                    const playsEl = document.getElementById('cbt-audio-plays');
+                    if(playsEl) playsEl.innerText = `Played: ${cbtAudioPlays[qKey]} / 2`;
+                    saveCbtSession();
+                    if(indicator) {
+                        indicator.innerHTML = `<span class="text-emerald-700 font-bold">✓ Audio finished</span>`;
+                        setTimeout(() => { if(!isCbtDialoguePlaying && indicator) indicator.classList.add('hidden'); }, 3000);
+                    }
+                    if(playBtn) playBtn.innerHTML = `<span>▶ Play Again (${cbtAudioPlays[qKey]}/2)</span>`;
+                    return;
+                }
+
+                const line = dialogues[lineIndex];
+                const speaker = line.speaker || line.role || `Speaker ${lineIndex + 1}`;
+                const text = line.text || line.content || "";
+                const roleCategory = detectSpeakerVoice(speaker).role_category;
+
+                if(indicator) {
+                    indicator.classList.remove('hidden');
+                    const icon = roleCategory === 'female' ? '👩' : (roleCategory === 'boy' ? '👦' : (roleCategory === 'girl' ? '👧' : '👨'));
+                    indicator.innerHTML = `<span>${icon}</span> <strong class="text-sky-900">${speaker}:</strong> <span class="text-gray-800">"${text}"</span>`;
+                }
+
+                if(!('speechSynthesis' in window)) {
+                    isCbtDialoguePlaying = false;
+                    return;
+                }
+
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'ja-JP';
+
+                if(roleCategory === 'boy' || roleCategory === 'girl') {
+                    utter.pitch = 1.55;
+                    utter.rate = 1.05;
+                } else if(roleCategory === 'female') {
+                    utter.pitch = 1.25;
+                    utter.rate = 1.0;
+                } else {
+                    utter.pitch = 0.85;
+                    utter.rate = 0.95;
+                }
+
+                try {
+                    const voices = window.speechSynthesis.getVoices();
+                    if(voices && voices.length > 0) {
+                        const jaVoices = voices.filter(v => v.lang && (v.lang.startsWith('ja') || (v.name && v.name.includes('Japanese'))));
+                        if(jaVoices.length > 0) {
+                            if(roleCategory === 'female' || roleCategory === 'girl') {
+                                const fVoice = jaVoices.find(v => v.name.includes('Female') || v.name.includes('Nanami') || v.name.includes('Haruka') || v.name.includes('Ayumi'));
+                                if(fVoice) utter.voice = fVoice;
+                                else utter.voice = jaVoices[0];
+                            } else {
+                                const mVoice = jaVoices.find(v => v.name.includes('Male') || v.name.includes('Keita') || v.name.includes('Ichiro') || v.name.includes('Daichi'));
+                                if(mVoice) utter.voice = mVoice;
+                                else utter.voice = jaVoices[0];
+                            }
+                        }
+                    }
+                } catch(e) {}
+
+                utter.onend = () => {
+                    lineIndex++;
+                    setTimeout(playNextLine, 600);
+                };
+                utter.onerror = (err) => {
+                    console.warn("Speech playback error:", err);
+                    lineIndex++;
+                    setTimeout(playNextLine, 500);
+                };
+
+                window.speechSynthesis.speak(utter);
+            }
+
+            playNextLine();
+        }
+
         function toggleCbtFlag() {
             const q = cbtQuestions[cbtCurrentIdx];
             if(!q) return;
@@ -3511,59 +3855,97 @@
                 imgBox.classList.add('hidden');
             }
 
-            // Audio Player with Prometric 2-plays limit & Multi-Tier Fallback
+            // Audio Player with Prometric 2-plays limit, Multi-Speaker Consecutive Speech & Multi-Tier Fallback
             const audioBox = document.getElementById('cbt-audio-box');
             const audioPlayer = document.getElementById('cbt-audio-player');
-            const hasDialogues = q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0;
-            const targetAudio = q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '');
+            const speechBtn = document.getElementById('cbt-dialogue-speech-btn');
+            const speechIndicator = document.getElementById('cbt-speech-speaker-indicator');
+            const audioCaption = document.getElementById('cbt-audio-caption');
 
-            if(targetAudio && targetAudio.trim() !== "") {
+            // Reset any ongoing speech synthesis when switching questions
+            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
+
+            const isListeningSec = (q.section && (q.section.includes('Listening') || q.section.includes('聴解'))) ||
+                                   (q.instruction && (q.instruction.includes('おんせい') || q.instruction.includes('音声')));
+            const dialoguesList = (q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
+                                : ((q.dialog && Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog : null);
+            const hasDialogues = !!dialoguesList;
+            const targetAudio = q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '') || q.audioUrl || '';
+
+            if(isListeningSec || targetAudio || hasDialogues) {
                 audioBox.classList.remove('hidden');
-                const rawAudio = targetAudio.trim();
-                const resolvedAudio = resolveAudioUrl(rawAudio);
-                audioPlayer.src = resolvedAudio;
-                
-                let audioAttempt = 0;
-                const audioFn = rawAudio.split('/').pop().trim();
-                const isSingleLetter = /^[a-iA-I]\.mp3$/i.test(audioFn);
-                const upperFn = isSingleLetter ? audioFn.toUpperCase() : audioFn;
-                const lowerFn = isSingleLetter ? audioFn.toLowerCase() : audioFn;
-                const prodCdn = 'https://my-website-new-fhe2.vercel.app';
-
-                audioPlayer.onerror = () => {
-                    // If audio was an embedded data URI or blob, do not fall back to stock A.mp3
-                    if (rawAudio.startsWith('data:') || rawAudio.startsWith('blob:')) {
-                        audioPlayer.onerror = null;
-                        return;
-                    }
-                    audioAttempt++;
-                    if(audioAttempt === 1) {
-                        audioPlayer.src = hasDialogues ? `assets/audio/dialogue_${lowerFn}` : (isSingleLetter ? `assets/${upperFn}` : `/api/audio/${audioFn}`);
-                    } else if(audioAttempt === 2) {
-                        audioPlayer.src = hasDialogues ? `${prodCdn}/api/audio/dialogue_${lowerFn}` : (isSingleLetter ? `assets/audio/${upperFn}` : `${prodCdn}/api/audio/${audioFn}`);
-                    } else if(audioAttempt === 3 && hasDialogues) {
-                        audioPlayer.src = `assets/audio/${lowerFn}`;
-                    } else if(audioAttempt === 3 && isSingleLetter) {
-                        audioPlayer.src = `${prodCdn}/assets/${upperFn}`;
-                    } else {
-                        audioPlayer.onerror = null;
-                        console.warn("Audio loading fallback exhausted for:", rawAudio);
-                    }
-                };
-
                 const plays = cbtAudioPlays[qKey] || 0;
                 document.getElementById('cbt-audio-plays').innerText = `Played: ${plays} / 2`;
-                audioPlayer.onplay = () => {
-                    if((cbtAudioPlays[qKey] || 0) >= 2) {
-                        audioPlayer.pause();
-                        alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
+
+                if(targetAudio && targetAudio.trim() !== "") {
+                    audioPlayer.classList.remove('hidden');
+                    const rawAudio = targetAudio.trim();
+                    const resolvedAudio = resolveAudioUrl(rawAudio);
+                    audioPlayer.src = resolvedAudio;
+                    if(audioCaption) audioCaption.innerText = "Multi-Speaker Continuous Audio";
+                    if(speechBtn) {
+                        if(hasDialogues) {
+                            speechBtn.classList.remove('hidden');
+                            speechBtn.innerHTML = `<span>▶ Dialogue Voice (${plays}/2)</span>`;
+                        } else {
+                            speechBtn.classList.add('hidden');
+                        }
                     }
-                };
-                audioPlayer.onended = () => {
-                    cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
-                    document.getElementById('cbt-audio-plays').innerText = `Played: ${cbtAudioPlays[qKey]} / 2`;
-                    saveCbtSession();
-                };
+
+                    let audioAttempt = 0;
+                    const audioFn = rawAudio.split('/').pop().trim().replace(/^dialogue_/, '');
+                    const isSingleLetter = /^[a-iA-I]\.mp3$/i.test(audioFn);
+                    const upperFn = isSingleLetter ? audioFn.toUpperCase() : audioFn;
+                    const lowerFn = isSingleLetter ? audioFn.toLowerCase() : audioFn;
+                    const prodCdn = 'https://my-website-new-fhe2.vercel.app';
+
+                    audioPlayer.onerror = () => {
+                        audioAttempt++;
+                        if(audioAttempt === 1) {
+                            audioPlayer.src = hasDialogues
+                                ? `assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
+                                : (isSingleLetter ? `assets/audio/${upperFn}` : `assets/audio_x/${lowerFn}`);
+                        } else if(audioAttempt === 2) {
+                            audioPlayer.src = hasDialogues
+                                ? `${prodCdn}/assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
+                                : `${prodCdn}/assets/${upperFn}`;
+                        } else if(audioAttempt === 3) {
+                            audioPlayer.src = `${prodCdn}/api/audio/${audioFn}`;
+                        } else {
+                            audioPlayer.onerror = null;
+                            console.warn("Audio file fallback exhausted, enabling native in-browser multi-speaker audio for:", rawAudio);
+                            if(hasDialogues && speechBtn) {
+                                speechBtn.classList.remove('hidden');
+                                if(audioCaption) audioCaption.innerText = "Audio file unavailable — Click ▶ Dialogue Voice";
+                            }
+                        }
+                    };
+
+                    audioPlayer.onplay = () => {
+                        if((cbtAudioPlays[qKey] || 0) >= 2) {
+                            audioPlayer.pause();
+                            alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
+                        }
+                    };
+                    audioPlayer.onended = () => {
+                        cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
+                        document.getElementById('cbt-audio-plays').innerText = `Played: ${cbtAudioPlays[qKey]} / 2`;
+                        saveCbtSession();
+                    };
+                } else if(hasDialogues) {
+                    // Question has dialogue scripts, but no pre-rendered audio file
+                    audioPlayer.classList.add('hidden');
+                    audioPlayer.src = "";
+                    if(speechBtn) {
+                        speechBtn.classList.remove('hidden');
+                        speechBtn.innerHTML = `<span>▶ Play Multi-Speaker Dialogue (${plays}/2)</span>`;
+                    }
+                    if(audioCaption) audioCaption.innerText = "Interactive Multi-Speaker Audio (Person-wise Voices)";
+                } else {
+                    audioPlayer.classList.add('hidden');
+                    audioPlayer.src = "";
+                    if(speechBtn) speechBtn.classList.add('hidden');
+                }
             } else {
                 audioPlayer.pause();
                 audioPlayer.src = "";
@@ -4100,6 +4482,9 @@
                 console.warn("Server save note (saved locally):", e);
             });
 
+            // Two-way sync to Supabase table
+            saveExamToSupabase(newExam);
+
             alert(`✓ CBT Exam "${title}" saved and published successfully!`);
         }
 
@@ -4186,12 +4571,13 @@
             renderHomeExams();
             if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
 
-            // 3. Notify server in background (do NOT reload from server here!)
+            // 3. Notify server & Supabase in background (do NOT reload from server here!)
             try {
                 fetch(`${API_BASE}/api/exams/${encodeURIComponent(examId)}`, {
                     method: 'DELETE'
                 }).catch(e => console.warn("Server delete note:", e));
             } catch(e) {}
+            deleteExamFromSupabase(examId, decodedTitle);
         }
 
         function downloadSampleScriptJson() {
@@ -4554,6 +4940,7 @@
                 renderAdminModelList();
                 renderHomeExams();
                 if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                deleteExamFromSupabase(item.id, name);
             }
         }
 
@@ -4811,30 +5198,58 @@
         }
 
         // --- BACKGROUND & GLASS TRANSPARENCY CONTROLS ---
-        function updateGlobalBg(input) {
+        async function updateGlobalBg(input) {
             const file = input.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.body.style.backgroundImage = `url('${e.target.result}')`;
-                    localStorage.setItem('exam_global_bg', e.target.result);
-                };
-                reader.readAsDataURL(file);
+            if(!file) return;
+
+            const statusEl = document.getElementById('admin-bg-upload-status');
+            if(statusEl) statusEl.innerHTML = `<span class="text-purple-300 font-bold">⏳ Uploading to Supabase Storage bucket "${SUPABASE_CONFIG.backgroundBucket}"...</span>`;
+
+            // 1. Try uploading to Supabase Storage dedicated bucket
+            let publicUrl = await uploadFileToSupabaseStorage(SUPABASE_CONFIG.backgroundBucket, file, 'background.jpg');
+
+            // 2. Graceful fallback to FileReader DataURL if storage upload failed
+            if(!publicUrl) {
+                publicUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
             }
+
+            document.body.style.backgroundImage = `url('${publicUrl}')`;
+            localStorage.setItem('exam_global_bg', publicUrl);
+
+            // 3. Persist URL globally to Supabase configuration table
+            await saveSiteSettingsToSupabase({ background_url: publicUrl });
+
+            if(statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Background saved & synced globally!</span>`;
+            alert("✓ Global Background Wallpaper updated and synced across all devices!");
         }
 
-        function resetGlobalBg() {
+        async function resetGlobalBg() {
             document.body.style.backgroundImage = "radial-gradient(circle at top right, #1e293b, #0f172a)";
             localStorage.removeItem('exam_global_bg');
+            await saveSiteSettingsToSupabase({ background_url: '' });
+            alert("✓ Reset to default dark gradient and synced globally.");
         }
 
-        function updateGlassOpacity(val) {
-            document.documentElement.style.setProperty('--glass-opacity', val);
-            localStorage.setItem('exam_glass_opacity', val);
+        function updateGlassOpacity(val, syncToCloud = true) {
+            const numVal = parseFloat(val);
+            document.documentElement.style.setProperty('--glass-opacity', numVal);
+            localStorage.setItem('exam_glass_opacity', numVal);
             const slider = document.getElementById('admin-glass-slider');
             const textEl = document.getElementById('admin-glass-val');
-            if(slider) slider.value = val;
-            if(textEl) textEl.innerText = Math.round(val * 100) + "%";
+            if(slider) slider.value = numVal;
+            if(textEl) textEl.innerText = Math.round(numVal * 100) + "%";
+
+            if(syncToCloud) {
+                // Debounce sync to avoid spamming while dragging slider
+                clearTimeout(window._glassSyncTimeout);
+                window._glassSyncTimeout = setTimeout(() => {
+                    saveSiteSettingsToSupabase({ background_transparency: numVal });
+                }, 500);
+            }
         }
     </script>
 </body>
