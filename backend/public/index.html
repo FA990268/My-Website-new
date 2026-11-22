@@ -3040,21 +3040,13 @@
         }
 
         function detectSpeakerVoice(name) {
-            const s = name.toLowerCase();
-            // Child boy
-            if(s.includes("ren") || s.includes("boy") || s.includes("leo") || s.includes("男の子") || s.includes("少年") || s.includes("son")) {
-                return { role_category: "boy", role_label: "👦 Child Boy (少年・男の子)", voice_id: "ja-JP-RenChildNeural" };
+            const s = (name || "").toLowerCase().trim();
+            // Female (Aoi)
+            if(s.includes("女") || s.includes("おんな") || s.includes("female") || s.includes("woman") || s.includes("mama") || s.includes("店員") || s.includes("aoi") || s.includes("nanami") || s.includes("母") || s.includes("girl") || s.includes("娘") || s.includes("yuna") || s.includes("jenny") || s.includes("姉") || s.includes("妹") || s.includes("女性")) {
+                return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
             }
-            // Child girl
-            if(s.includes("yuna") || s.includes("girl") || s.includes("mia") || s.includes("女の子") || s.includes("少女") || s.includes("daughter")) {
-                return { role_category: "girl", role_label: "👧 Child Girl (少女・女の子)", voice_id: "ja-JP-YunaChildNeural" };
-            }
-            // Female
-            if(s.includes("女") || s.includes("おんな") || s.includes("female") || s.includes("woman") || s.includes("mama") || s.includes("店員") || s.includes("aoi") || s.includes("nanami") || s.includes("jenny")) {
-                return { role_category: "female", role_label: "👩 Adult Female (成人女性・店員)", voice_id: "ja-JP-AoiNeural" };
-            }
-            // Male default
-            return { role_category: "male", role_label: "👨 Adult Male (成人男性・ナレーター)", voice_id: "ja-JP-DaichiNeural" };
+            // Male (Keita) - default for male, man, papa, narrator, or unspecified speakers
+            return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
         }
 
         function renderSpeakerMappingChips() {
@@ -3073,21 +3065,17 @@
                 const conf = speakerVoiceMap[spk];
                 const card = document.createElement('div');
                 card.className = "bg-white/5 border border-white/10 p-3.5 rounded-xl flex flex-col justify-between space-y-2.5";
-                const roleIcon = conf.role_category === 'boy' ? '👦' : (conf.role_category === 'girl' ? '👧' : (conf.role_category === 'female' ? '👩' : '👨'));
+                const roleIcon = conf.role_category === 'female' ? '👩' : '👨';
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <span class="font-bold text-white text-xs truncate mr-2">${roleIcon} ${spk}</span>
                         <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded font-semibold">${conf.role_category.toUpperCase()}</span>
                     </div>
                     <select onchange="updateSpeakerVoice('${spk}', this.value)" class="glass-input p-2 rounded-lg text-xs font-semibold w-full">
-                        <option value="ja-JP-DaichiNeural" ${conf.voice_id==='ja-JP-DaichiNeural'?'selected':''}>👨 Daichi (Adult Deep Male • 成人男性)</option>
-                        <option value="ja-JP-KeitaNeural" ${conf.voice_id==='ja-JP-KeitaNeural'?'selected':''}>👨 Keita (Adult Standard Male • 成人男性)</option>
-                        <option value="ja-JP-AoiNeural" ${conf.voice_id==='ja-JP-AoiNeural'?'selected':''}>👩 Aoi (Adult Gentle Female • 成人女性)</option>
-                        <option value="ja-JP-NanamiNeural" ${conf.voice_id==='ja-JP-NanamiNeural'?'selected':''}>👩 Nanami (Adult Standard Female • 成人女性)</option>
-                        <option value="ja-JP-RenChildNeural" ${conf.voice_id==='ja-JP-RenChildNeural'?'selected':''}>👦 Ren (Child Male / Boy • 少年・男の子)</option>
-                        <option value="ja-JP-YunaChildNeural" ${conf.voice_id==='ja-JP-YunaChildNeural'?'selected':''}>👧 Yuna (Child Female / Girl • 少女・女の子)</option>
-                        <option value="en-US-GuyNeural" ${conf.voice_id==='en-US-GuyNeural'?'selected':''}>👨 Guy (English Male)</option>
-                        <option value="en-US-JennyNeural" ${conf.voice_id==='en-US-JennyNeural'?'selected':''}>👩 Jenny (English Female)</option>
+                        <option value="ja-JP-KeitaNeural" ${conf.voice_id==='ja-JP-KeitaNeural'?'selected':''}>👨 Keita (Male • 成人男性)</option>
+                        <option value="ja-JP-AoiNeural" ${conf.voice_id==='ja-JP-AoiNeural'?'selected':''}>👩 Aoi (Female • 成人女性)</option>
+                        <option value="ja-JP-DaichiNeural" ${conf.voice_id==='ja-JP-DaichiNeural'?'selected':''}>👨 Keita Deep (Male • 低音男性)</option>
+                        <option value="ja-JP-NanamiNeural" ${conf.voice_id==='ja-JP-NanamiNeural'?'selected':''}>👩 Aoi Standard (Female • 標準女性)</option>
                     </select>
                     <button onclick="testSpeakerVoice('${spk}')" class="bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 border border-cyan-400/30 text-[11px] font-bold py-1.5 px-3 rounded-lg transition flex items-center justify-center gap-1.5">
                         <span>▶ Test Voice</span>
@@ -3807,10 +3795,12 @@
                 const text = line.text || line.content || "";
                 const roleCategory = detectSpeakerVoice(speaker).role_category;
 
+                // Configure listening section so dialogue scripts are strictly hidden during audio playback
                 if(indicator) {
                     indicator.classList.remove('hidden');
-                    const icon = roleCategory === 'female' ? '👩' : (roleCategory === 'boy' ? '👦' : (roleCategory === 'girl' ? '👧' : '👨'));
-                    indicator.innerHTML = `<span>${icon}</span> <strong class="text-slate-900">${speaker}:</strong> <span class="text-slate-700">"${text}"</span>`;
+                    const icon = roleCategory === 'female' ? '👩' : '👨';
+                    const speakerLabel = roleCategory === 'female' ? 'Female (Aoi)' : 'Male (Keita)';
+                    indicator.innerHTML = `<span class="flex items-center gap-2 text-slate-700 text-xs font-semibold"><span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span><span>${icon} ${speakerLabel} audio playing... (${lineIndex + 1}/${dialogues.length})</span></span>`;
                 }
 
                 if(!('speechSynthesis' in window)) {
@@ -3822,14 +3812,11 @@
                 const utter = new SpeechSynthesisUtterance(text);
                 utter.lang = 'ja-JP';
 
-                if(roleCategory === 'boy' || roleCategory === 'girl') {
-                    utter.pitch = 1.55;
-                    utter.rate = 1.05;
-                } else if(roleCategory === 'female') {
-                    utter.pitch = 1.25;
-                    utter.rate = 1.0;
+                if(roleCategory === 'female') {
+                    utter.pitch = 1.15;
+                    utter.rate = 0.98;
                 } else {
-                    utter.pitch = 0.85;
+                    utter.pitch = 0.88;
                     utter.rate = 0.95;
                 }
 
@@ -3838,12 +3825,12 @@
                     if(voices && voices.length > 0) {
                         const jaVoices = voices.filter(v => v.lang && (v.lang.startsWith('ja') || (v.name && v.name.includes('Japanese'))));
                         if(jaVoices.length > 0) {
-                            if(roleCategory === 'female' || roleCategory === 'girl') {
-                                const fVoice = jaVoices.find(v => v.name.includes('Female') || v.name.includes('Nanami') || v.name.includes('Haruka') || v.name.includes('Ayumi'));
+                            if(roleCategory === 'female') {
+                                const fVoice = jaVoices.find(v => v.name.includes('Aoi') || v.name.includes('Female') || v.name.includes('Nanami') || v.name.includes('Haruka') || v.name.includes('Ayumi'));
                                 if(fVoice) utter.voice = fVoice;
                                 else utter.voice = jaVoices[0];
                             } else {
-                                const mVoice = jaVoices.find(v => v.name.includes('Male') || v.name.includes('Keita') || v.name.includes('Ichiro') || v.name.includes('Daichi'));
+                                const mVoice = jaVoices.find(v => v.name.includes('Keita') || v.name.includes('Male') || v.name.includes('Ichiro') || v.name.includes('Daichi'));
                                 if(mVoice) utter.voice = mVoice;
                                 else utter.voice = jaVoices[0];
                             }
@@ -3898,9 +3885,15 @@
                 flagTxt.innerText = "Flag for Review (後で見直す)";
             }
 
-            // Passage
+            const isListeningSec = (q.section && (q.section.includes('Listening') || q.section.includes('聴解'))) ||
+                                   (q.instruction && (q.instruction.includes('おんせい') || q.instruction.includes('音声'))) ||
+                                   (q.audio && q.audio.trim() !== '') ||
+                                   (q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0) ||
+                                   (q.dialog && Array.isArray(q.dialog) && q.dialog.length > 0);
+
+            // Passage: Only show in reading sections. Listening sections must strictly hide dialogue scripts during playback
             const passageBox = document.getElementById('cbt-passage-box');
-            if(q.passage && q.passage.trim() !== "") {
+            if(!isListeningSec && q.passage && q.passage.trim() !== "") {
                 passageBox.innerText = q.passage;
                 passageBox.classList.remove('hidden');
             } else {
@@ -3964,8 +3957,6 @@
                 try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
             }
 
-            const isListeningSec = (q.section && (q.section.includes('Listening') || q.section.includes('聴解'))) ||
-                                   (q.instruction && (q.instruction.includes('おんせい') || q.instruction.includes('音声')));
             const dialoguesList = (q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
                                 : ((q.dialog && Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog : null);
             const hasDialogues = !!dialoguesList;

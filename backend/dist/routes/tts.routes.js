@@ -23,16 +23,6 @@ export function getSilenceBuffer(seconds) {
     return Buffer.concat(Array(numFrames).fill(SILENT_FRAME));
 }
 export const CUSTOM_VOICES = {
-    "ja-JP-DaichiNeural": {
-        base_voice: "ja-JP-KeitaNeural",
-        pitch_offset: -12,
-        rate_offset: -4,
-        name: "Daichi (大智)",
-        gender: "Male",
-        role_category: "male",
-        role_label: "👨 Adult Male (成人男性・ナレーター)",
-        locale: "ja-JP",
-    },
     "ja-JP-KeitaNeural": {
         base_voice: "ja-JP-KeitaNeural",
         pitch_offset: 0,
@@ -40,47 +30,97 @@ export const CUSTOM_VOICES = {
         name: "Keita (圭太)",
         gender: "Male",
         role_category: "male",
-        role_label: "👨 Adult Male (成人男性・標準)",
+        role_label: "👨 Male (Keita - 成人男性)",
+        locale: "ja-JP",
+    },
+    "Keita": {
+        base_voice: "ja-JP-KeitaNeural",
+        pitch_offset: 0,
+        rate_offset: 0,
+        name: "Keita (圭太)",
+        gender: "Male",
+        role_category: "male",
+        role_label: "👨 Male (Keita - 成人男性)",
+        locale: "ja-JP",
+    },
+    "keita": {
+        base_voice: "ja-JP-KeitaNeural",
+        pitch_offset: 0,
+        rate_offset: 0,
+        name: "Keita (圭太)",
+        gender: "Male",
+        role_category: "male",
+        role_label: "👨 Male (Keita - 成人男性)",
         locale: "ja-JP",
     },
     "ja-JP-AoiNeural": {
         base_voice: "ja-JP-NanamiNeural",
-        pitch_offset: -5,
-        rate_offset: -4,
+        pitch_offset: -4,
+        rate_offset: -2,
         name: "Aoi (葵)",
         gender: "Female",
         role_category: "female",
-        role_label: "👩 Adult Female (成人女性・店員・案内)",
+        role_label: "👩 Female (Aoi - 成人女性)",
+        locale: "ja-JP",
+    },
+    "Aoi": {
+        base_voice: "ja-JP-NanamiNeural",
+        pitch_offset: -4,
+        rate_offset: -2,
+        name: "Aoi (葵)",
+        gender: "Female",
+        role_category: "female",
+        role_label: "👩 Female (Aoi - 成人女性)",
+        locale: "ja-JP",
+    },
+    "aoi": {
+        base_voice: "ja-JP-NanamiNeural",
+        pitch_offset: -4,
+        rate_offset: -2,
+        name: "Aoi (葵)",
+        gender: "Female",
+        role_category: "female",
+        role_label: "👩 Female (Aoi - 成人女性)",
         locale: "ja-JP",
     },
     "ja-JP-NanamiNeural": {
         base_voice: "ja-JP-NanamiNeural",
         pitch_offset: 0,
         rate_offset: 0,
-        name: "Nanami (七海)",
+        name: "Aoi (Nanami)",
         gender: "Female",
         role_category: "female",
-        role_label: "👩 Adult Female (成人女性・標準)",
+        role_label: "👩 Female (Aoi - 標準女性)",
+        locale: "ja-JP",
+    },
+    "ja-JP-DaichiNeural": {
+        base_voice: "ja-JP-KeitaNeural",
+        pitch_offset: -6,
+        rate_offset: -2,
+        name: "Keita (Deep)",
+        gender: "Male",
+        role_category: "male",
+        role_label: "👨 Male (Keita - 低音男性)",
         locale: "ja-JP",
     },
     "ja-JP-RenChildNeural": {
         base_voice: "ja-JP-KeitaNeural",
-        pitch_offset: 28,
-        rate_offset: 10,
+        pitch_offset: 20,
+        rate_offset: 6,
         name: "Ren (蓮・男の子)",
         gender: "Children Male",
-        role_category: "boy",
-        role_label: "👦 Child Boy (少年・男の子)",
+        role_category: "male",
+        role_label: "👦 Child Boy (男の子)",
         locale: "ja-JP",
     },
     "ja-JP-YunaChildNeural": {
         base_voice: "ja-JP-NanamiNeural",
-        pitch_offset: 26,
-        rate_offset: 8,
+        pitch_offset: 20,
+        rate_offset: 6,
         name: "Yuna (由奈・女の子)",
         gender: "Children Female",
-        role_category: "girl",
-        role_label: "👧 Child Girl (少女・女の子)",
+        role_category: "female",
+        role_label: "👧 Child Girl (女の子)",
         locale: "ja-JP",
     },
     "en-US-GuyNeural": {
@@ -106,19 +146,12 @@ export const CUSTOM_VOICES = {
 };
 export function parseSpeakerRole(speakerName) {
     const s = (speakerName || "").toLowerCase().trim();
-    if (["ren", "leo", "蓮", "男の子", "少年", "boy", "son", "息子"].some(k => s.includes(k))) {
-        return { role_category: "boy", role_label: "👦 Child Boy (男の子・少年)", voice_id: "ja-JP-RenChildNeural" };
+    // Female speakers -> Aoi
+    if (["女", "おんな", "female", "woman", "mama", "店員", "aoi", "nanami", "母", "姉", "妹", "妻", "彼女", "girl", "daughter", "娘", "yuna", "mia", "女性", "f"].some(k => s.includes(k))) {
+        return { role_category: "female", role_label: "👩 Female (Aoi - 葵)", voice_id: "ja-JP-AoiNeural" };
     }
-    if (["yuna", "mia", "由奈", "女の子", "少女", "girl", "daughter", "娘"].some(k => s.includes(k))) {
-        return { role_category: "girl", role_label: "👧 Child Girl (女の子・少女)", voice_id: "ja-JP-YunaChildNeural" };
-    }
-    if (["女", "おんな", "female", "woman", "mama", "店員", "aoi", "nanami", "母"].some(k => s.includes(k))) {
-        return { role_category: "female", role_label: "👩 Adult Female (女性)", voice_id: "ja-JP-NanamiNeural" };
-    }
-    if (["男", "おとこ", "male", "man", "papa", "keita", "daichi", "guy", "父"].some(k => s.includes(k))) {
-        return { role_category: "male", role_label: "👨 Adult Male (男性)", voice_id: "ja-JP-KeitaNeural" };
-    }
-    return { role_category: "male", role_label: "👨 Adult Male (ナレーター)", voice_id: "ja-JP-DaichiNeural" };
+    // Male speakers & narrator -> Keita
+    return { role_category: "male", role_label: "👨 Male (Keita - 圭太)", voice_id: "ja-JP-KeitaNeural" };
 }
 export function getAudioDirectories() {
     return [
@@ -145,39 +178,16 @@ export function saveAudioBuffer(filename, buffer) {
     }
     return `/api/audio/${safeFilename}`;
 }
-export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural', rate = 1.0, pitch = 0) {
-    const cfg = CUSTOM_VOICES[voiceId] || CUSTOM_VOICES['ja-JP-NanamiNeural'];
-    const baseVoice = cfg.base_voice || voiceId || 'ja-JP-NanamiNeural';
-    const effPitch = pitch + (cfg.pitch_offset || 0);
-    const effRate = Math.round((rate - 1.0) * 100) + (cfg.rate_offset || 0);
+export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-KeitaNeural', rate = 1.0, pitch = 0) {
+    const normVoice = (voiceId || '').trim();
+    const isFem = /female|woman|aoi|nanami|葵|女/i.test(normVoice);
+    const cfg = CUSTOM_VOICES[normVoice] || (isFem ? CUSTOM_VOICES['ja-JP-AoiNeural'] : CUSTOM_VOICES['ja-JP-KeitaNeural']);
+    const baseVoice = cfg?.base_voice || (isFem ? 'ja-JP-NanamiNeural' : 'ja-JP-KeitaNeural');
+    const effPitch = pitch + (cfg?.pitch_offset || 0);
+    const effRate = Math.round((rate - 1.0) * 100) + (cfg?.rate_offset || 0);
     const pitchStr = `${effPitch >= 0 ? '+' : ''}${effPitch}Hz`;
     const rateStr = `${effRate >= 0 ? '+' : ''}${effRate}%`;
-    // Strategy 1: Pure Node.js Microsoft Edge Neural TTS (Native multi-speaker Japanese voices)
-    try {
-        const tts = new MsEdgeTTS();
-        await tts.setMetadata(baseVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-        const audioStream = tts.toStream(text, { pitch: pitchStr, rate: rateStr }).audioStream;
-        const buf = await new Promise((resolve, reject) => {
-            const chunks = [];
-            const timer = setTimeout(() => reject(new Error("MsEdgeTTS timeout")), 12000);
-            audioStream.on('data', (chunk) => chunks.push(chunk));
-            audioStream.on('end', () => {
-                clearTimeout(timer);
-                resolve(Buffer.concat(chunks));
-            });
-            audioStream.on('error', (err) => {
-                clearTimeout(timer);
-                reject(err);
-            });
-        });
-        if (buf && buf.length > 0) {
-            return buf;
-        }
-    }
-    catch (edgeErr) {
-        console.warn("MsEdgeTTS Node execution note, trying secondary:", edgeErr?.message);
-    }
-    // Strategy 2: Python edge-tts CLI execution (High fidelity neural Japanese voices)
+    // Strategy 1: Python edge-tts CLI execution (Primary high fidelity neural Keita and Aoi voices, fast ~1s)
     try {
         const tempMp3 = path.join(os.tmpdir(), `tts_${crypto.randomUUID()}.mp3`);
         await execFileAsync('python', [
@@ -194,12 +204,37 @@ export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural
                 fs.unlinkSync(tempMp3);
             }
             catch (e) { }
-            if (buf.length > 0)
+            if (buf && buf.length > 0)
                 return buf;
         }
     }
     catch (pyErr) {
-        // Python not installed or edge_tts error
+        // Python not installed or edge_tts error, fallback
+    }
+    // Strategy 2: Pure Node.js Microsoft Edge Neural TTS
+    try {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(baseVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        const audioStream = tts.toStream(text, { pitch: pitchStr, rate: rateStr }).audioStream;
+        const buf = await new Promise((resolve, reject) => {
+            const chunks = [];
+            const timer = setTimeout(() => reject(new Error("MsEdgeTTS timeout")), 4000);
+            audioStream.on('data', (chunk) => chunks.push(chunk));
+            audioStream.on('end', () => {
+                clearTimeout(timer);
+                resolve(Buffer.concat(chunks));
+            });
+            audioStream.on('error', (err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+        });
+        if (buf && buf.length > 0) {
+            return buf;
+        }
+    }
+    catch (edgeErr) {
+        console.warn("MsEdgeTTS Node execution note, trying Google TTS fallback:", edgeErr?.message);
     }
     // Strategy 3: Google Translate TTS audio fetch (Emergency fallback)
     try {
@@ -216,7 +251,7 @@ export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Referer': 'https://translate.google.com/'
                 },
-                signal: AbortSignal.timeout(10000)
+                signal: AbortSignal.timeout(8000)
             });
             if (resp.ok) {
                 const arrayBuf = await resp.arrayBuffer();
@@ -232,7 +267,6 @@ export async function synthesizeSpeechBuffer(text, voiceId = 'ja-JP-NanamiNeural
     catch (fbErr) {
         // Google TTS network error
     }
-    // Never return default sound A.mp3 to avoid corrupting unique speech
     throw new Error(`Speech synthesis engine unavailable for: "${text.substring(0, 30)}..."`);
 }
 // Voice Catalog
