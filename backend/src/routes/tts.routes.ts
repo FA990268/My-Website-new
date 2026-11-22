@@ -15,10 +15,10 @@ const __dirname = path.dirname(__filename);
 
 const router = Router();
 
-// Standard MPEG-2 Layer 3 Mono 24kHz / 48kbps silent frame (144 bytes)
+// Standard MPEG-2 Layer 3 Mono 24kHz / 96kbps silent frame (576 bytes)
 const SILENT_FRAME = Buffer.concat([
-  Buffer.from('fff364c47c0000034800000000', 'hex'),
-  Buffer.alloc(131, 0x55)
+  Buffer.from('fff394c47c0000034800000000', 'hex'),
+  Buffer.alloc(563, 0x55)
 ]);
 
 export function getSilenceBuffer(seconds: number): Buffer {
@@ -400,7 +400,7 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
     for (let sIdx = 0; sIdx < scriptList.length; sIdx++) {
       const s = scriptList[sIdx];
       const scriptId = s.id || `script_${sIdx + 1}`;
-      const turns = Array.isArray(s.dialogues) ? s.dialogues : (Array.isArray(s.turns) ? s.turns : []);
+      const turns = Array.isArray(s.dialogues) ? s.dialogues : (Array.isArray(s.dialog) ? s.dialog : (Array.isArray(s.turns) ? s.turns : []));
 
       let rawTarget = s.targetAudio || s.target_audio || `${scriptId}.mp3`;
       let targetFilename = path.basename(rawTarget);
@@ -419,7 +419,7 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
       for (let tIdx = 0; tIdx < turns.length; tIdx++) {
         const turn = turns[tIdx];
         const spk = String(turn.speaker || 'Narrator').trim();
-        const text = String(turn.text || turn.dialogue || '').trim();
+        const text = String(turn.text || turn.dialogue || turn.content || '').trim();
         if (!text) continue;
 
         let voiceId = turn.voice || turn.voice_id;

@@ -108,12 +108,36 @@ router.get('/exams', async (req, res) => {
                             }
                             catch (e) { }
                         }
+                        const qs = d.questions || d.examData || [];
+                        if (Array.isArray(qs)) {
+                            qs.forEach((q, qIdx) => {
+                                if (q.dialog && !q.dialogues)
+                                    q.dialogues = q.dialog;
+                                if (q.dialogues && !q.dialog)
+                                    q.dialog = q.dialogues;
+                                const dList = q.dialogues || q.dialog;
+                                if (Array.isArray(dList)) {
+                                    dList.forEach((t, tIdx) => {
+                                        if (t.content && !t.text)
+                                            t.text = t.content;
+                                        if (t.text && !t.content)
+                                            t.content = t.text;
+                                        if (t.role && !t.speaker)
+                                            t.speaker = t.role;
+                                        if (t.speaker && !t.role)
+                                            t.role = t.speaker;
+                                        if (!t.id)
+                                            t.id = `turn_${q.id || qIdx}_${tIdx + 1}`;
+                                    });
+                                }
+                            });
+                        }
                         return {
                             id: String(r.id || d.id || `sb_${idx + 1}`),
                             title: r.title || d.title || `Mock Test #${idx + 1}`,
                             duration: d.duration || 60,
                             passMark: d.passMark || 200,
-                            questions: d.questions || d.examData || [],
+                            questions: qs,
                             isActive: d.isActive !== false,
                             ...d
                         };
@@ -196,6 +220,46 @@ router.post('/exams', async (req, res) => {
         fileExams = fileExams.filter(x => x.id !== examId && x.exam_id !== examId);
         fileExams.push(examData);
         saveExamsToFile(fileExams);
+        // 3. Sync to Supabase Cloud Table
+        try {
+            const supabaseUrl = process.env.SUPABASE_URL || 'https://xyxjoaluucliwwvprlvk.supabase.co';
+            const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh';
+            const supabaseTable = process.env.SUPABASE_TABLE || 'JFT Mock Test';
+            const checkRes = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?title=eq.${encodeURIComponent(title)}&select=id`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            });
+            const existing = checkRes.ok ? await checkRes.json() : [];
+            if (Array.isArray(existing) && existing.length > 0) {
+                await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?id=eq.${existing[0].id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ title, data: examData })
+                });
+            }
+            else {
+                await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ title, data: examData })
+                });
+            }
+        }
+        catch (sbErr) {
+            console.warn('Backend Supabase sync note:', sbErr.message);
+        }
         res.json({
             success: true,
             id: examId,

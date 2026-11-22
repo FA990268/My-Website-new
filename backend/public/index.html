@@ -1769,6 +1769,22 @@
                     // 1. If row contains structured questions (Prometric CBT style)
                     const qs = parsed.questions || (Array.isArray(parsed.examData) ? parsed.examData : null);
                     if(qs && qs.length > 0 && (parsed.duration || parsed.passMark || qs[0]?.section || qs[0]?.options)) {
+                        // Normalize dialogue structures bi-directionally
+                        qs.forEach((q, qIdx) => {
+                            if(q.dialog && !q.dialogues) q.dialogues = q.dialog;
+                            if(q.dialogues && !q.dialog) q.dialog = q.dialogues;
+                            const dList = q.dialogues || q.dialog;
+                            if(Array.isArray(dList)) {
+                                dList.forEach((t, tIdx) => {
+                                    if(t.content && !t.text) t.text = t.content;
+                                    if(t.text && !t.content) t.content = t.text;
+                                    if(t.role && !t.speaker) t.speaker = t.role;
+                                    if(t.speaker && !t.role) t.role = t.speaker;
+                                    if(!t.id) t.id = `turn_${q.id || qIdx}_${tIdx + 1}`;
+                                });
+                            }
+                        });
+
                         const cbtIdx = allCbtExams.findIndex(x => x.id === rowId || x.title === title);
                         const cbtModel = {
                             id: rowId,
@@ -1831,7 +1847,7 @@
         }
 
         async function saveExamToSupabase(examPayload) {
-            if(!examPayload || (!examPayload.title && !examPayload.modelName)) return;
+            if(!examPayload || (!examPayload.title && !examPayload.modelName)) return false;
             try {
                 const title = (examPayload.title || examPayload.modelName || 'Untitled Exam').trim();
                 const url = `${SUPABASE_CONFIG.url}/rest/v1/${encodeURIComponent(SUPABASE_CONFIG.tableName)}`;
@@ -1843,10 +1859,20 @@
                         'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`
                     }
                 });
+                
+                if(!checkRes.ok) {
+                    const err = await checkRes.json().catch(() => ({}));
+                    if(checkRes.status === 401 || checkRes.status === 403 || err.code === '42501') {
+                        showSupabaseRlsAlert();
+                        return false;
+                    }
+                }
+
                 const existing = checkRes.ok ? await checkRes.json() : [];
+                let saveRes;
                 
                 if(Array.isArray(existing) && existing.length > 0) {
-                    await fetch(`${url}?id=eq.${existing[0].id}`, {
+                    saveRes = await fetch(`${url}?id=eq.${existing[0].id}`, {
                         method: 'PATCH',
                         headers: {
                             'apikey': SUPABASE_CONFIG.anonKey,
@@ -1859,9 +1885,8 @@
                             data: examPayload
                         })
                     });
-                    console.log(`Updated exam "${title}" in Supabase table "${SUPABASE_CONFIG.tableName}".`);
                 } else {
-                    await fetch(url, {
+                    saveRes = await fetch(url, {
                         method: 'POST',
                         headers: {
                             'apikey': SUPABASE_CONFIG.anonKey,
@@ -1874,11 +1899,27 @@
                             data: examPayload
                         })
                     });
-                    console.log(`Inserted exam "${title}" into Supabase table "${SUPABASE_CONFIG.tableName}".`);
                 }
+
+                if(!saveRes.ok) {
+                    const err = await saveRes.json().catch(() => ({}));
+                    console.error("Supabase save failed:", saveRes.status, err);
+                    if(saveRes.status === 401 || saveRes.status === 403 || err.code === '42501') {
+                        showSupabaseRlsAlert();
+                        return false;
+                    }
+                    return false;
+                }
+                console.log(`✓ Synchronized exam "${title}" to Supabase table "${SUPABASE_CONFIG.tableName}".`);
+                return true;
             } catch(err) {
                 console.warn("Error saving exam to Supabase:", err);
+                return false;
             }
+        }
+
+        function showSupabaseRlsAlert() {
+            alert(`⚠️ Supabase Row-Level Security (RLS) is blocking uploads!\n\nQuestions uploaded via Control Panel JSON cannot sync globally across other devices until RLS is disabled on the table.\n\nPlease open your Supabase SQL Editor and run this single SQL line:\n\nALTER TABLE "JFT Mock Test" DISABLE ROW LEVEL SECURITY;\n\nOnce run, all Control Panel uploads will immediately propagate globally to all devices!`);
         }
 
         async function deleteExamFromSupabase(examId, title) {
@@ -2892,7 +2933,7 @@
             // Extract all dialogue scripts from questions or root
             let extractedScripts = [];
             qs.forEach((q, qIdx) => {
-                const rawTurns = q.dialogues || q.dialogue || q.turns || q.lines || [];
+                const rawTurns = q.dialogues || q.dialog || q.dialogue || q.turns || q.lines || [];
                 if(rawTurns.length > 0) {
                     const sId = q.dialogueId || q.audio || `q_${qIdx+1}`;
                     const sTitle = q.passage ? `${q.section || 'Question ' + (qIdx+1)}: ${q.passage.split('\n')[0]}` : (q.section || `Question ${qIdx+1}`);
@@ -2906,7 +2947,7 @@
                         dialogues: rawTurns.map((t, tIdx) => ({
                             id: t.id || `${sId}_t${tIdx+1}`,
                             speaker: String(t.speaker || t.role || "Speaker").trim(),
-                            text: String(t.text || t.dialogue || "").trim(),
+                            text: String(t.text || t.content || t.dialogue || "").trim(),
                             voice: t.voice,
                             rate: t.rate || 1.0,
                             pitch: t.pitch || 0
@@ -2927,7 +2968,7 @@
                             dialogues: (s.dialogues || []).map((t, tIdx) => ({
                                 id: t.id || `${s.id}_t${tIdx+1}`,
                                 speaker: String(t.speaker || t.role || "Speaker").trim(),
-                                text: String(t.text || t.dialogue || "").trim(),
+                                text: String(t.text || t.content || t.dialogue || "").trim(),
                                 voice: t.voice,
                                 rate: t.rate || 1.0,
                                 pitch: t.pitch || 0
@@ -3001,8 +3042,8 @@
             previewUnifiedCbtStudio(raw, sourceName);
             if(!pendingAdminCbtJson) return;
 
-            // Automatically sync parsed exam questions to Supabase table
-            saveExamToSupabase(pendingAdminCbtJson);
+            // Note: We do NOT auto-publish on raw upload so the admin has time to generate audio & review!
+            // Global Supabase sync happens when the admin clicks "💾 PUBLISH UNIFIED CBT EXAM TO SERVER".
 
             const title = pendingAdminCbtJson.title || "Uploaded Exam";
             const qCount = pendingAdminCbtJson.questions ? pendingAdminCbtJson.questions.length : 0;
@@ -3041,11 +3082,16 @@
 
         function detectSpeakerVoice(name) {
             const s = (name || "").toLowerCase().trim();
-            // Female (Aoi)
-            if(s.includes("女") || s.includes("おんな") || s.includes("female") || s.includes("woman") || s.includes("mama") || s.includes("店員") || s.includes("aoi") || s.includes("nanami") || s.includes("母") || s.includes("girl") || s.includes("娘") || s.includes("yuna") || s.includes("jenny") || s.includes("姉") || s.includes("妹") || s.includes("女性")) {
+            const isFemale = ["女", "おんな", "female", "woman", "mama", "店員", "母", "姉", "妹", "妻", "彼女", "girl", "daughter", "娘", "yuna", "mia", "女性", "aoi", "nanami", "speaker 1", "speaker a", "person a", "話者1", "話者a"].some(k => s.includes(k)) || s === "a" || s === "1";
+            const isMale = ["男", "おとこ", "male", "man", "papa", "父", "兄", "弟", "夫", "彼氏", "boy", "son", "息子", "男性", "keita", "speaker 2", "speaker b", "person b", "話者2", "話者b"].some(k => s.includes(k)) || s === "b" || s === "2";
+
+            if(isFemale && !isMale) {
                 return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
             }
-            // Male (Keita) - default for male, man, papa, narrator, or unspecified speakers
+            if(isMale) {
+                return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
+            }
+            // Default fallback: Keita for male/narrator
             return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
         }
 
@@ -3749,6 +3795,36 @@
             if(playBtn && !playBtn.disabled) playBtn.innerHTML = `<span>▶ Play Audio</span>`;
         }
 
+        async function fetchNeuralTtsAudio(text, voiceId, speaker) {
+            if(!text || !String(text).trim()) return null;
+            const endpoints = [
+                '/api/tts/turn',
+                'https://my-website-new-fhe2.vercel.app/api/tts/turn',
+                'http://localhost:5000/api/tts/turn'
+            ];
+            for (const url of endpoints) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8500);
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text, voice_id: voiceId, speaker }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.audio_base64) return data.audio_base64;
+                        if (data.audioUrl) return resolveAudioUrl(data.audioUrl);
+                    }
+                } catch(e) {
+                    // Try next endpoint
+                }
+            }
+            return null;
+        }
+
         async function playCbtDialogueSpeech() {
             const q = cbtQuestions[cbtCurrentIdx];
             if(!q) return;
@@ -3804,45 +3880,27 @@
                 // Configure listening section so dialogue scripts are strictly hidden during audio playback
                 if(indicator) {
                     indicator.classList.remove('hidden');
-                    const icon = roleCategory === 'female' ? '👩' : '👨';
-                    const speakerLabel = roleCategory === 'female' ? 'Female (Aoi)' : 'Male (Keita)';
-                    indicator.innerHTML = `<span class="flex items-center gap-2 text-slate-700 text-xs font-semibold"><span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span><span>${icon} ${speakerLabel} audio playing... (${lineIndex + 1}/${dialogues.length})</span></span>`;
+                    indicator.innerHTML = `<span class="flex items-center gap-2 text-slate-700 text-xs font-semibold"><span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span><span>⏳ Loading Keita & Aoi studio audio... (${lineIndex + 1}/${dialogues.length})</span></span>`;
                 }
 
                 // 1. Prioritize authentic natural studio neural audio (Keita / Aoi)
                 let audioSrc = line.turn_audio_url || line.audio_base64 || line.audioUrl;
                 if(!audioSrc) {
-                    try {
-                        const res = await fetch('/api/tts/turn', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text, voice_id: voiceId, speaker })
-                        });
-                        if(res.ok) {
-                            const data = await res.json();
-                            if(data.audio_base64) audioSrc = data.audio_base64;
-                            else if(data.audioUrl) audioSrc = resolveAudioUrl(data.audioUrl);
-                            line.audio_base64 = data.audio_base64;
-                        }
-                    } catch(e) {
-                        try {
-                            const res2 = await fetch('https://my-website-new-fhe2.vercel.app/api/tts/turn', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ text, voice_id: voiceId, speaker })
-                            });
-                            if(res2.ok) {
-                                const data2 = await res2.json();
-                                if(data2.audio_base64) audioSrc = data2.audio_base64;
-                                line.audio_base64 = data2.audio_base64;
-                            }
-                        } catch(e2) {}
+                    audioSrc = await fetchNeuralTtsAudio(text, voiceId, speaker);
+                    if(audioSrc) {
+                        line.audio_base64 = audioSrc;
                     }
                 }
 
                 if(!isCbtDialoguePlaying) return;
 
                 if(audioSrc) {
+                    if(indicator) {
+                        indicator.classList.remove('hidden');
+                        const icon = roleCategory === 'female' ? '👩' : '👨';
+                        const speakerLabel = roleCategory === 'female' ? 'Female (Aoi)' : 'Male (Keita)';
+                        indicator.innerHTML = `<span class="flex items-center gap-2 text-slate-700 text-xs font-semibold"><span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span><span>${icon} ${speakerLabel} audio playing... (${lineIndex + 1}/${dialogues.length})</span></span>`;
+                    }
                     try {
                         const audio = new Audio(audioSrc);
                         currentCbtTurnAudio = audio;
@@ -4080,6 +4138,22 @@
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
                     if(speechBtn) speechBtn.classList.remove('hidden');
+
+                    // Pre-fetch neural turn audio in the background for SQL-inserted or unsynthesized dialogues
+                    if(Array.isArray(dialoguesList)) {
+                        dialoguesList.forEach(line => {
+                            if(!line.audio_base64 && !line.turn_audio_url) {
+                                const spk = line.speaker || line.role || "";
+                                const spkConf = detectSpeakerVoice(spk);
+                                const txt = line.text || line.content || "";
+                                if(txt) {
+                                    fetchNeuralTtsAudio(txt, spkConf.voice_id, spk).then(b64 => {
+                                        if(b64) line.audio_base64 = b64;
+                                    }).catch(() => {});
+                                }
+                            }
+                        });
+                    }
                 } else {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
