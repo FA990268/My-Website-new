@@ -1126,22 +1126,21 @@
                     <img id="cbt-q-image" src="" alt="Question Illustration" class="max-w-full h-auto max-h-52 sm:max-h-72 mx-auto rounded border border-gray-300 shadow-sm object-contain bg-white p-2">
                 </div>
 
-                <!-- Listening Audio Player -->
-                <div id="cbt-audio-box" class="hidden mb-4 sm:mb-6 p-4 sm:p-5 bg-sky-50 border-2 border-sky-300 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between mb-2 sm:mb-3">
-                        <span class="text-xs font-black text-sky-900 flex items-center gap-1.5 sm:gap-2">
-                            🔊 LISTENING AUDIO (音声を聞いてください)
+                <!-- Listening Audio Player (Minimal & Clean) -->
+                <div id="cbt-audio-box" class="hidden mb-4 sm:mb-6 p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl shadow-xs">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            🔊 Listening Audio
                         </span>
-                        <span id="cbt-audio-plays" class="text-[11px] sm:text-xs font-bold bg-sky-200 text-sky-900 px-2 sm:px-2.5 py-0.5 rounded-full">Played: 0 / 2</span>
+                        <div class="flex items-center gap-2">
+                            <button id="cbt-dialogue-speech-btn" type="button" onclick="playCbtDialogueSpeech()" class="hidden px-2.5 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded-md font-semibold text-[11px] shadow-xs transition">
+                                ▶ Play Audio
+                            </button>
+                            <span id="cbt-audio-plays" class="text-[11px] font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full transition-colors">Played: 0 / 2</span>
+                        </div>
                     </div>
-                    <audio id="cbt-audio-player" controls class="w-full h-10 sm:h-11 mb-1.5"></audio>
-                    <div class="text-[10px] sm:text-[11px] text-sky-700 flex justify-between items-center">
-                        <span id="cbt-audio-caption">Multi-Speaker Continuous Audio</span>
-                        <button id="cbt-dialogue-speech-btn" type="button" onclick="playCbtDialogueSpeech()" class="hidden px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold text-[11px] shadow transition flex items-center gap-1">
-                            <span>▶ Play Dialogue Audio</span>
-                        </button>
-                    </div>
-                    <div id="cbt-speech-speaker-indicator" class="hidden text-xs font-bold text-sky-900 mt-2 bg-sky-100/90 p-2 sm:p-2.5 rounded-xl border border-sky-300 flex items-center gap-2"></div>
+                    <audio id="cbt-audio-player" controls class="w-full h-9 rounded-lg"></audio>
+                    <div id="cbt-speech-speaker-indicator" class="hidden text-xs text-slate-700 mt-2 px-2.5 py-1.5 rounded-lg bg-sky-50/80 border border-sky-100 flex items-center gap-2"></div>
                 </div>
             </div>
 
@@ -1554,10 +1553,23 @@
                 document.getElementById('auto-download-format').value = autoDlFmt;
             }
 
-            // Save session before unload (handles mobile browser desktop toggle, rotation, tab switch)
+            // Save session before unload ONLY if exam screen is actively visible and in-progress
             window.addEventListener('beforeunload', () => {
-                saveCbtSession();
-                saveModelSession();
+                const examUi = document.getElementById('cbt-exam-ui');
+                const isCbtVisible = examUi && !examUi.classList.contains('hidden');
+                if(isCbtVisible && activeCbtExam && cbtQuestions && cbtQuestions.length > 0) {
+                    saveCbtSession();
+                } else {
+                    clearCbtSession(false);
+                }
+
+                const modelUi = document.getElementById('exam-ui');
+                const isModelVisible = modelUi && !modelUi.classList.contains('hidden');
+                if(isModelVisible && config && config.length > 0) {
+                    saveModelSession();
+                } else {
+                    clearModelSession();
+                }
             });
 
             window.addEventListener('resize', () => {
@@ -1569,8 +1581,21 @@
                 }
             });
             window.addEventListener('pagehide', () => {
-                saveCbtSession();
-                saveModelSession();
+                const examUi = document.getElementById('cbt-exam-ui');
+                const isCbtVisible = examUi && !examUi.classList.contains('hidden');
+                if(isCbtVisible && activeCbtExam && cbtQuestions && cbtQuestions.length > 0) {
+                    saveCbtSession();
+                } else {
+                    clearCbtSession(false);
+                }
+
+                const modelUi = document.getElementById('exam-ui');
+                const isModelVisible = modelUi && !modelUi.classList.contains('hidden');
+                if(isModelVisible && config && config.length > 0) {
+                    saveModelSession();
+                } else {
+                    clearModelSession();
+                }
             });
         }
 
@@ -2015,10 +2040,16 @@
             const isCbtActive = !document.getElementById('cbt-exam-ui')?.classList.contains('hidden');
             const isModelActive = !document.getElementById('exam-ui')?.classList.contains('hidden');
 
-            if((isCbtActive || isModelActive) && (viewName === 'home' || viewName === 'about' || viewName === 'courses' || viewName === 'mock')) {
-                if(!confirm("An exam is currently in progress. Do you wish to leave the test screen? Your progress is saved in this browser.")) {
+            if((isCbtActive || isModelActive) && (viewName === 'home' || viewName === 'about' || viewName === 'courses' || viewName === 'mock' || viewName === 'login')) {
+                if(!confirm("An exam is currently in progress. Navigating away will close the exam session. Do you wish to proceed?")) {
                     return;
                 }
+                clearCbtSession(true);
+                clearModelSession();
+            } else if(viewName === 'home' || viewName === 'mock' || viewName === 'about' || viewName === 'courses' || viewName === 'login') {
+                // If not in an active exam, ensure any completed/lingering session is wiped
+                clearCbtSession(true);
+                clearModelSession();
             }
 
             // Hide intermediate flow sections & modal screens unconditionally
@@ -3529,6 +3560,11 @@
 
         // --- CBT Session Persistence (Prevents session loss on desktop site toggle / reload) ---
         function saveCbtSession() {
+            const examUi = document.getElementById('cbt-exam-ui');
+            if(!examUi || examUi.classList.contains('hidden')) {
+                // If not actively taking CBT exam, do NOT save session!
+                return;
+            }
             if(!activeCbtExam || !cbtQuestions || cbtQuestions.length === 0) return;
             try {
                 const payload = {
@@ -3546,28 +3582,55 @@
                     candidateLoc: document.getElementById('s-loc')?.value || ""
                 };
                 localStorage.setItem(CBT_SESSION_KEY, JSON.stringify(payload));
+                sessionStorage.setItem(CBT_SESSION_KEY, JSON.stringify(payload));
             } catch(e) {
                 console.warn("Could not save CBT session:", e);
             }
         }
 
-        function clearCbtSession() {
+        function clearCbtSession(resetState = true) {
             try {
                 localStorage.removeItem(CBT_SESSION_KEY);
+                sessionStorage.removeItem(CBT_SESSION_KEY);
+                localStorage.removeItem('active_cbt_session');
+                sessionStorage.removeItem('active_cbt_session');
+                localStorage.removeItem('jft_cbt_answers');
+                sessionStorage.removeItem('jft_cbt_answers');
             } catch(e) {}
+            if(resetState) {
+                activeCbtExam = null;
+                cbtQuestions = [];
+                cbtAnswers = {};
+                cbtFlags = {};
+                cbtAudioPlays = {};
+                if(cbtTimerInterval) {
+                    clearInterval(cbtTimerInterval);
+                    cbtTimerInterval = null;
+                }
+                const audioPlayer = document.getElementById('cbt-audio-player');
+                if(audioPlayer) {
+                    try { audioPlayer.pause(); audioPlayer.currentTime = 0; audioPlayer.src = ""; } catch(e) {}
+                }
+                if(typeof stopCbtDialogueSpeech === 'function') {
+                    stopCbtDialogueSpeech();
+                }
+            }
         }
 
         function tryRestoreCbtSession() {
             try {
-                const raw = localStorage.getItem(CBT_SESSION_KEY);
+                const raw = localStorage.getItem(CBT_SESSION_KEY) || sessionStorage.getItem(CBT_SESSION_KEY);
                 if(!raw) return false;
                 const session = JSON.parse(raw);
-                if(!session || !session.activeCbtExam || !session.cbtQuestions) return false;
+                if(!session || !session.activeCbtExam || !session.cbtQuestions || session.cbtQuestions.length === 0) {
+                    clearCbtSession(true);
+                    return false;
+                }
 
                 const elapsedSec = Math.floor((Date.now() - session.savedAt) / 1000);
                 const remainingTime = (session.time || 3600) - elapsedSec;
                 if(remainingTime <= 0) {
-                    clearCbtSession();
+                    clearCbtSession(true);
                     return false;
                 }
 
@@ -3600,6 +3663,7 @@
                 return true;
             } catch(e) {
                 console.error("Failed to restore CBT session:", e);
+                clearCbtSession(true);
                 return false;
             }
         }
@@ -3649,6 +3713,39 @@
 
         let isCbtDialoguePlaying = false;
 
+        function updateAudioPlaysBadge(qKey) {
+            const plays = cbtAudioPlays[qKey] || 0;
+            const badge = document.getElementById('cbt-audio-plays');
+            const speechBtn = document.getElementById('cbt-dialogue-speech-btn');
+            if(!badge) return;
+
+            if(plays >= 2) {
+                badge.innerText = "Played: 2 / 2 (Locked)";
+                badge.className = "text-[11px] font-bold bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full";
+                if(speechBtn) {
+                    speechBtn.disabled = true;
+                    speechBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    speechBtn.innerHTML = `<span>Locked (2/2)</span>`;
+                }
+            } else if(plays === 1) {
+                badge.innerText = "Played: 1 / 2";
+                badge.className = "text-[11px] font-semibold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full";
+                if(speechBtn) {
+                    speechBtn.disabled = false;
+                    speechBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    speechBtn.innerHTML = `<span>▶ Play Again (1/2)</span>`;
+                }
+            } else {
+                badge.innerText = "Played: 0 / 2";
+                badge.className = "text-[11px] font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full";
+                if(speechBtn) {
+                    speechBtn.disabled = false;
+                    speechBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    speechBtn.innerHTML = `<span>▶ Play Audio</span>`;
+                }
+            }
+        }
+
         function stopCbtDialogueSpeech() {
             isCbtDialoguePlaying = false;
             if('speechSynthesis' in window) {
@@ -3657,7 +3754,7 @@
             const indicator = document.getElementById('cbt-speech-speaker-indicator');
             if(indicator) indicator.classList.add('hidden');
             const playBtn = document.getElementById('cbt-dialogue-speech-btn');
-            if(playBtn) playBtn.innerHTML = `<span>▶ Play Dialogue Audio</span>`;
+            if(playBtn && !playBtn.disabled) playBtn.innerHTML = `<span>▶ Play Audio</span>`;
         }
 
         function playCbtDialogueSpeech() {
@@ -3681,12 +3778,14 @@
 
             // Pause standard audio element if playing
             const audioPlayer = document.getElementById('cbt-audio-player');
-            if(audioPlayer) audioPlayer.pause();
+            if(audioPlayer) {
+                try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
+            }
 
             isCbtDialoguePlaying = true;
             const indicator = document.getElementById('cbt-speech-speaker-indicator');
             const playBtn = document.getElementById('cbt-dialogue-speech-btn');
-            if(playBtn) playBtn.innerHTML = `<span>⏸ Pause Audio</span>`;
+            if(playBtn) playBtn.innerHTML = `<span>⏸ Pause</span>`;
 
             let lineIndex = 0;
 
@@ -3694,14 +3793,12 @@
                 if(!isCbtDialoguePlaying || lineIndex >= dialogues.length) {
                     isCbtDialoguePlaying = false;
                     cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
-                    const playsEl = document.getElementById('cbt-audio-plays');
-                    if(playsEl) playsEl.innerText = `Played: ${cbtAudioPlays[qKey]} / 2`;
+                    updateAudioPlaysBadge(qKey);
                     saveCbtSession();
                     if(indicator) {
-                        indicator.innerHTML = `<span class="text-emerald-700 font-bold">✓ Audio finished</span>`;
-                        setTimeout(() => { if(!isCbtDialoguePlaying && indicator) indicator.classList.add('hidden'); }, 3000);
+                        indicator.innerHTML = `<span class="text-emerald-700 font-semibold">✓ Completed</span>`;
+                        setTimeout(() => { if(!isCbtDialoguePlaying && indicator) indicator.classList.add('hidden'); }, 2000);
                     }
-                    if(playBtn) playBtn.innerHTML = `<span>▶ Play Again (${cbtAudioPlays[qKey]}/2)</span>`;
                     return;
                 }
 
@@ -3713,7 +3810,7 @@
                 if(indicator) {
                     indicator.classList.remove('hidden');
                     const icon = roleCategory === 'female' ? '👩' : (roleCategory === 'boy' ? '👦' : (roleCategory === 'girl' ? '👧' : '👨'));
-                    indicator.innerHTML = `<span>${icon}</span> <strong class="text-sky-900">${speaker}:</strong> <span class="text-gray-800">"${text}"</span>`;
+                    indicator.innerHTML = `<span>${icon}</span> <strong class="text-slate-900">${speaker}:</strong> <span class="text-slate-700">"${text}"</span>`;
                 }
 
                 if(!('speechSynthesis' in window)) {
@@ -3756,12 +3853,12 @@
 
                 utter.onend = () => {
                     lineIndex++;
-                    setTimeout(playNextLine, 600);
+                    setTimeout(playNextLine, 500);
                 };
                 utter.onerror = (err) => {
                     console.warn("Speech playback error:", err);
                     lineIndex++;
-                    setTimeout(playNextLine, 500);
+                    setTimeout(playNextLine, 400);
                 };
 
                 window.speechSynthesis.speak(utter);
@@ -3860,10 +3957,12 @@
             const audioPlayer = document.getElementById('cbt-audio-player');
             const speechBtn = document.getElementById('cbt-dialogue-speech-btn');
             const speechIndicator = document.getElementById('cbt-speech-speaker-indicator');
-            const audioCaption = document.getElementById('cbt-audio-caption');
 
-            // Reset any ongoing speech synthesis when switching questions
+            // Reset any ongoing speech or playback when rendering a question
             if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
+            if(audioPlayer) {
+                try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
+            }
 
             const isListeningSec = (q.section && (q.section.includes('Listening') || q.section.includes('聴解'))) ||
                                    (q.instruction && (q.instruction.includes('おんせい') || q.instruction.includes('音声')));
@@ -3874,19 +3973,17 @@
 
             if(isListeningSec || targetAudio || hasDialogues) {
                 audioBox.classList.remove('hidden');
-                const plays = cbtAudioPlays[qKey] || 0;
-                document.getElementById('cbt-audio-plays').innerText = `Played: ${plays} / 2`;
+                updateAudioPlaysBadge(qKey);
 
                 if(targetAudio && targetAudio.trim() !== "") {
                     audioPlayer.classList.remove('hidden');
                     const rawAudio = targetAudio.trim();
                     const resolvedAudio = resolveAudioUrl(rawAudio);
                     audioPlayer.src = resolvedAudio;
-                    if(audioCaption) audioCaption.innerText = "Multi-Speaker Continuous Audio";
+
                     if(speechBtn) {
-                        if(hasDialogues) {
+                        if(hasDialogues && !targetAudio.startsWith('data:') && !targetAudio.includes('assets/')) {
                             speechBtn.classList.remove('hidden');
-                            speechBtn.innerHTML = `<span>▶ Dialogue Voice (${plays}/2)</span>`;
                         } else {
                             speechBtn.classList.add('hidden');
                         }
@@ -3913,10 +4010,9 @@
                             audioPlayer.src = `${prodCdn}/api/audio/${audioFn}`;
                         } else {
                             audioPlayer.onerror = null;
-                            console.warn("Audio file fallback exhausted, enabling native in-browser multi-speaker audio for:", rawAudio);
+                            console.warn("Audio file fallback exhausted, enabling native in-browser audio for:", rawAudio);
                             if(hasDialogues && speechBtn) {
                                 speechBtn.classList.remove('hidden');
-                                if(audioCaption) audioCaption.innerText = "Audio file unavailable — Click ▶ Dialogue Voice";
                             }
                         }
                     };
@@ -3924,23 +4020,20 @@
                     audioPlayer.onplay = () => {
                         if((cbtAudioPlays[qKey] || 0) >= 2) {
                             audioPlayer.pause();
+                            audioPlayer.currentTime = 0;
                             alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
+                            return;
                         }
                     };
                     audioPlayer.onended = () => {
                         cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
-                        document.getElementById('cbt-audio-plays').innerText = `Played: ${cbtAudioPlays[qKey]} / 2`;
+                        updateAudioPlaysBadge(qKey);
                         saveCbtSession();
                     };
                 } else if(hasDialogues) {
-                    // Question has dialogue scripts, but no pre-rendered audio file
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
-                    if(speechBtn) {
-                        speechBtn.classList.remove('hidden');
-                        speechBtn.innerHTML = `<span>▶ Play Multi-Speaker Dialogue (${plays}/2)</span>`;
-                    }
-                    if(audioCaption) audioCaption.innerText = "Interactive Multi-Speaker Audio (Person-wise Voices)";
+                    if(speechBtn) speechBtn.classList.remove('hidden');
                 } else {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
