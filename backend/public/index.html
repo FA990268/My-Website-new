@@ -4304,44 +4304,105 @@
             }
         }
 
+        function isCbtAnswerCorrect(userChoice, q) {
+            if(userChoice === undefined || userChoice === null || userChoice === "") return false;
+            const correctVal = (q.correct !== undefined && q.correct !== null) ? q.correct 
+                             : ((q.answer !== undefined && q.answer !== null) ? q.answer : q.correctAnswer);
+            if(correctVal === undefined || correctVal === null || correctVal === "") return false;
+
+            // 1. Direct equality (e.g. 2 == "2" or 2 == 2)
+            if(userChoice == correctVal) return true;
+
+            // 2. Letter matching (A=1, B=2, C=3, D=4)
+            const letterMap = { 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'a': 1, 'b': 2, 'c': 3, 'd': 4 };
+            const strCorrect = String(correctVal).trim();
+            if(letterMap[strCorrect] !== undefined && Number(userChoice) === letterMap[strCorrect]) {
+                return true;
+            }
+            const strChoice = String(userChoice).trim();
+            if(letterMap[strChoice] !== undefined && letterMap[strChoice] == correctVal) {
+                return true;
+            }
+
+            // 3. Option text match (when correctVal is the full string of the correct choice)
+            if(Array.isArray(q.options)) {
+                const choiceIdx = parseInt(userChoice, 10) - 1;
+                if(choiceIdx >= 0 && choiceIdx < q.options.length) {
+                    const chosenOption = String(q.options[choiceIdx]).trim();
+                    if(chosenOption === strCorrect) return true;
+                }
+            }
+
+            // 4. 0-indexed number fallback (0 -> 1, 1 -> 2, etc.)
+            if(correctVal === 0 && Number(userChoice) === 1) return true;
+
+            return false;
+        }
+
         async function finishCbtExam() {
-            clearCbtSession();
-            if(cbtTimerInterval) clearInterval(cbtTimerInterval);
+            // Clear storage so page refresh does not reload the active test, but keep in-memory data for scoring!
+            clearCbtSession(false);
+            if(cbtTimerInterval) {
+                clearInterval(cbtTimerInterval);
+                cbtTimerInterval = null;
+            }
             const audioPlayer = document.getElementById('cbt-audio-player');
-            if(audioPlayer) audioPlayer.pause();
+            if(audioPlayer) {
+                try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
+            }
+            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
 
             let grandTotal = 0, userScore = 0;
+            let totalCorrect = 0, totalAnswered = 0;
             const secStats = {};
 
             cbtQuestions.forEach((q, idx) => {
                 const qKey = q.id || `q_${idx}`;
-                const m = parseInt(q.mark, 10) || 6;
+                const m = parseInt(q.mark, 10) || 5;
                 grandTotal += m;
-                if(!secStats[q.section]) secStats[q.section] = { user: 0, possible: 0 };
-                secStats[q.section].possible += m;
 
-                if(cbtAnswers[qKey] == q.correct) {
-                    userScore += m;
-                    secStats[q.section].user += m;
+                const secName = (q.section || "General").trim();
+                if(!secStats[secName]) secStats[secName] = { user: 0, possible: 0, correctCount: 0, totalCount: 0 };
+                secStats[secName].possible += m;
+                secStats[secName].totalCount++;
+
+                const userChoice = cbtAnswers[qKey] !== undefined ? cbtAnswers[qKey]
+                                 : (cbtAnswers[q.id] !== undefined ? cbtAnswers[q.id]
+                                 : (cbtAnswers[`q_${idx}`] !== undefined ? cbtAnswers[`q_${idx}`]
+                                 : cbtAnswers[idx]));
+
+                if(userChoice !== undefined && userChoice !== null && userChoice !== "") {
+                    totalAnswered++;
+                    if(isCbtAnswerCorrect(userChoice, q)) {
+                        userScore += m;
+                        totalCorrect++;
+                        secStats[secName].user += m;
+                        secStats[secName].correctCount++;
+                    }
                 }
             });
+
+            grandTotal = Math.max(grandTotal, 1);
+            const passMarkVal = parseInt(activeCbtExam ? activeCbtExam.passMark : 200, 10) || 200;
+            const scaled = Math.min(250, Math.round((userScore / grandTotal) * 250));
+            const isPassed = scaled >= passMarkVal;
 
             let sectionHTML = "";
             const sectionListForSub = [];
             Object.keys(secStats).forEach(secName => {
-                sectionHTML += buildRow(secName, secStats[secName].user, secStats[secName].possible);
+                const s = secStats[secName];
+                sectionHTML += buildRow(secName, s.user, s.possible, s.correctCount, s.totalCount);
                 sectionListForSub.push({
                     name: secName,
-                    score: secStats[secName].user,
-                    total: secStats[secName].possible,
-                    percent: Math.round((secStats[secName].user / (secStats[secName].possible || 1)) * 100)
+                    score: s.user,
+                    total: s.possible,
+                    percent: Math.round((s.user / (s.possible || 1)) * 100),
+                    correctCount: s.correctCount,
+                    totalCount: s.totalCount
                 });
             });
 
-            const passMarkVal = parseInt(activeCbtExam ? activeCbtExam.passMark : 200, 10) || 200;
-            const scaled = Math.round((userScore / (grandTotal || 1)) * 250);
-            const isPassed = scaled >= passMarkVal;
-
+            // Display results on screen
             document.getElementById('res-total').innerText = scaled;
             document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
             document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
@@ -4354,21 +4415,34 @@
             const msg = document.getElementById('result-message');
             msg.innerHTML = isPassed ? "RESULT: PASSED (合格)" : "RESULT: FAILED (不合格)";
             msg.className = isPassed ? "p-4 border rounded bg-green-50 text-green-800 font-bold mb-8 text-center" : "p-4 border rounded bg-red-50 text-red-800 font-bold mb-8 text-center";
-            document.getElementById('res-breakdown').innerHTML = sectionHTML;
+            
+            // Render summary breakdown
+            const summaryHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Total Questions</span><span class="text-sm font-black text-gray-900">${cbtQuestions.length}</span></div>
+                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Answered</span><span class="text-sm font-black text-sky-700">${totalAnswered} / ${cbtQuestions.length}</span></div>
+                    <div><span class="text-[10px] text-emerald-600 font-bold uppercase block">Correct (正解)</span><span class="text-sm font-black text-emerald-700">✅ ${totalCorrect}</span></div>
+                    <div><span class="text-[10px] text-rose-600 font-bold uppercase block">Wrong / Unanswered</span><span class="text-sm font-black text-rose-700">❌ ${cbtQuestions.length - totalCorrect}</span></div>
+                </div>
+            `;
+            document.getElementById('res-breakdown').innerHTML = summaryHTML + sectionHTML;
 
             // Submit exam results to PostgreSQL backend (users, exam_submissions, submission_answers)
             try {
                 const submissionQuestions = cbtQuestions.map((q, idx) => {
                     const qKey = q.id || `q_${idx}`;
-                    const selectedVal = cbtAnswers[qKey];
+                    const selectedVal = cbtAnswers[qKey] !== undefined ? cbtAnswers[qKey]
+                                      : (cbtAnswers[q.id] !== undefined ? cbtAnswers[q.id]
+                                      : (cbtAnswers[`q_${idx}`] !== undefined ? cbtAnswers[`q_${idx}`]
+                                      : cbtAnswers[idx]));
                     return {
                         question_number: idx + 1,
                         section_name: q.section || "General",
                         question_text: q.question,
                         options: q.options || [],
                         selected_option: selectedVal !== undefined ? selectedVal : null,
-                        correct_option: q.correct,
-                        mark: parseInt(q.mark, 10) || 6
+                        correct_option: q.correct !== undefined ? q.correct : q.answer,
+                        mark: parseInt(q.mark, 10) || 5
                     };
                 });
 
@@ -4822,9 +4896,16 @@
             window.open('/data/jft_40q_unified_cbt_with_dialogues.json', '_blank');
         }
 
-        function buildRow(n, g, t) {
+        function buildRow(n, g, t, correctQ, totalQ) {
             const p = t > 0 ? (g / t) * 100 : 0;
-            return `<div class="flex items-center gap-4 mb-2"><div class="w-1/3 text-[11px] font-bold text-gray-700">${n}</div><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden border"><div class="h-full bg-blue-600" style="width: ${p}%"></div></div><div class="w-12 text-right text-[11px] font-bold">${Math.round(p)}%</div></div>`;
+            const qInfo = (totalQ !== undefined) ? `<span class="text-[10px] text-gray-500 font-semibold ml-1">(${correctQ || 0}/${totalQ} Qs)</span>` : '';
+            return `<div class="flex items-center gap-4 mb-2.5">
+                <div class="w-2/5 text-[11px] font-bold text-gray-700 truncate" title="${n}">${n} ${qInfo}</div>
+                <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+                    <div class="h-full bg-blue-600 rounded-full transition-all duration-500" style="width: ${p}%"></div>
+                </div>
+                <div class="w-14 text-right text-[11px] font-bold text-gray-800">${Math.round(p)}%</div>
+            </div>`;
         }
 
         function downloadPDF() {
@@ -5335,19 +5416,29 @@
             clearModelSession();
             let grandTotal = 0, userScore = 0, sectionHTML = "";
             let curName = "", curPossible = 0, curUser = 0;
+            let curCorrect = 0, curTotal = 0;
+            let totalCorrect = 0, totalQuestions = 0;
             const passMarkVal = parseInt(document.getElementById('pass-mark').value) || 200;
+
             config.forEach((item, index) => {
                 if(item.type === 's') {
-                    if(curName !== "") sectionHTML += buildRow(curName, curUser, curPossible);
-                    curName = item.title; curPossible = 0; curUser = 0;
+                    if(curName !== "") sectionHTML += buildRow(curName, curUser, curPossible, curCorrect, curTotal);
+                    curName = item.title; curPossible = 0; curUser = 0; curCorrect = 0; curTotal = 0;
                 } else {
-                    let m = parseInt(item.assignedMark);
+                    totalQuestions++;
+                    curTotal++;
+                    let m = parseInt(item.assignedMark || item.mark, 10) || 5;
                     curPossible += m; grandTotal += m;
-                    if(userAnswers[item.id] == item.correct) { curUser += m; userScore += m; }
+                    if(isCbtAnswerCorrect(userAnswers[item.id], item)) {
+                        curUser += m;
+                        userScore += m;
+                        curCorrect++;
+                        totalCorrect++;
+                    }
                 }
-                if(index === config.length - 1) sectionHTML += buildRow(curName, curUser, curPossible);
+                if(index === config.length - 1) sectionHTML += buildRow(curName, curUser, curPossible, curCorrect, curTotal);
             });
-            let scaled = Math.round((userScore / (grandTotal || 1)) * 250);
+            let scaled = Math.min(250, Math.round((userScore / (grandTotal || 1)) * 250));
             document.getElementById('res-total').innerText = scaled;
             document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
             document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
@@ -5359,7 +5450,16 @@
             const msg = document.getElementById('result-message');
             msg.innerHTML = scaled >= passMarkVal ? "RESULT: PASSED (合格)" : "RESULT: FAILED (不合格)";
             msg.className = scaled >= passMarkVal ? "p-4 border rounded bg-green-50 text-green-800 font-bold mb-8 text-center" : "p-4 border rounded bg-red-50 text-red-800 font-bold mb-8 text-center";
-            document.getElementById('res-breakdown').innerHTML = sectionHTML;
+            
+            const summaryHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Total Questions</span><span class="text-sm font-black text-gray-900">${totalQuestions}</span></div>
+                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Answered</span><span class="text-sm font-black text-sky-700">${Object.keys(userAnswers).length} / ${totalQuestions}</span></div>
+                    <div><span class="text-[10px] text-emerald-600 font-bold uppercase block">Correct (正解)</span><span class="text-sm font-black text-emerald-700">✅ ${totalCorrect}</span></div>
+                    <div><span class="text-[10px] text-rose-600 font-bold uppercase block">Wrong / Unanswered</span><span class="text-sm font-black text-rose-700">❌ ${totalQuestions - totalCorrect}</span></div>
+                </div>
+            `;
+            document.getElementById('res-breakdown').innerHTML = summaryHTML + sectionHTML;
 
             // Save Model Test submission to PostgreSQL backend
             try {

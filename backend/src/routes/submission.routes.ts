@@ -55,7 +55,19 @@ router.post('/submit-exam', async (req: Request, res: Response) => {
       const rawCorr = q.correct_option !== undefined ? q.correct_option : q.correct;
       const mark = Number(q.mark || q.marks || 6);
 
-      const isCorrect = rawSel !== undefined && rawCorr !== undefined && String(rawSel).trim() === String(rawCorr).trim();
+      const selStr = String(rawSel !== undefined && rawSel !== null ? rawSel : "").trim();
+      const corrStr = String(rawCorr !== undefined && rawCorr !== null ? rawCorr : "").trim();
+      const letterMap: Record<string, string> = { 'A': '1', 'B': '2', 'C': '3', 'D': '4', 'a': '1', 'b': '2', 'c': '3', 'd': '4' };
+      const normSel = letterMap[selStr] || selStr;
+      const normCorr = letterMap[corrStr] || corrStr;
+
+      let isCorrect = selStr !== "" && corrStr !== "" && (normSel === normCorr || selStr === corrStr);
+      if (!isCorrect && Array.isArray(q.options) && Number(rawSel) >= 1 && Number(rawSel) <= q.options.length) {
+        const optText = String(q.options[Number(rawSel) - 1]).trim();
+        if (optText === corrStr) isCorrect = true;
+      }
+      if (!isCorrect && corrStr === "0" && normSel === "1") isCorrect = true;
+
       if (isCorrect) {
         totalCorrect++;
         totalScore += mark;
@@ -67,14 +79,14 @@ router.post('/submit-exam', async (req: Request, res: Response) => {
         question_number: qNum,
         section_name: secName,
         question_text: qText,
-        selected_option: String(rawSel || ""),
-        correct_option: String(rawCorr || ""),
+        selected_option: selStr,
+        correct_option: corrStr,
         is_correct: isCorrect,
         marks_awarded: isCorrect ? mark : 0
       });
     });
 
-    if (payload.totalScore && Number(payload.totalScore) > 0 && totalScore === 0) {
+    if (payload.totalScore !== undefined && Number(payload.totalScore) >= 0) {
       totalScore = Number(payload.totalScore);
     }
 
