@@ -75,15 +75,47 @@
         .glass-input option { background: #1e293b; color: white; }
         .selected-ans { background: #2563eb !important; border-color: #60a5fa !important; transform: scale(1.05); color: white !important; }
 
-        #cert-area { width: 210mm; min-height: 297mm; padding: 20mm; margin: auto; background: white; color: black; }
-        .info-row { display: flex; align-items: center; white-space: nowrap; margin-bottom: 10px; }
-        .info-label { font-weight: bold; min-width: 150px; font-size: 14px; }
-        .info-value { border-bottom: 1px solid #ddd; flex-grow: 1; padding-left: 5px; font-size: 14px; }
+        #cert-area {
+            width: 210mm;
+            max-width: 100%;
+            margin: auto;
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+        }
+        .cert-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 16mm 20mm;
+            margin: 0 auto;
+            background: #ffffff;
+            box-sizing: border-box;
+            position: relative;
+            page-break-after: always;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", 'Meiryo', 'Yu Gothic', 'Hiragino Sans', "Noto Sans JP", sans-serif;
+        }
+        .cert-page:last-child {
+            page-break-after: auto;
+        }
+        @media print {
+            body { background: white !important; margin: 0 !important; }
+            #cert-area { box-shadow: none !important; width: 100% !important; margin: 0 !important; }
+            .cert-page { width: 100% !important; min-height: 297mm !important; padding: 15mm 18mm !important; page-break-after: always !important; }
+            .no-print { display: none !important; }
+        }
+        .cert-info-row { display: flex; align-items: baseline; margin-bottom: 6px; font-size: 13px; line-height: 1.35; }
+        .cert-info-label { font-weight: bold; width: 180px; flex-shrink: 0; color: #1e293b; }
+        .cert-info-label-sub { font-size: 10.5px; font-weight: normal; color: #64748b; margin-left: 2px; }
+        .cert-info-colon { margin-right: 8px; color: #64748b; font-weight: bold; }
+        .cert-info-value { flex-grow: 1; border-bottom: 1px dotted #cbd5e1; font-weight: 600; color: #0f172a; padding-bottom: 2px; }
         
-        .score-bar-container { position: relative; height: 12px; background: #eee; border-radius: 6px; margin: 25px 0; border: 1px solid #ddd; }
-        .score-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(to right, #f97316, #fbbf24, #22c55e); width: 0%; position: relative; }
-        .score-marker { position: absolute; top: -25px; transform: translateX(-50%); font-weight: bold; }
-        .score-marker::after { content: '▼'; display: block; font-size: 10px; text-align: center; }
+        .jft-total-score-card { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 16px 20px; margin: 18px 0; }
+        .jft-score-bar-track { position: relative; height: 12px; border-radius: 9999px; background: linear-gradient(to right, #fb923c 0%, #fbbf24 40%, #a3e635 70%, #22c55e 100%); margin: 32px 0 24px 0; border: 1px solid #cbd5e1; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+        .jft-passing-line { position: absolute; left: 79.17%; top: -6px; height: 24px; width: 2.5px; background: #0f172a; transform: translateX(-50%); border-radius: 2px; }
+        .jft-passing-label { position: absolute; left: 79.17%; top: 20px; transform: translateX(-50%); font-size: 11px; font-weight: 800; color: #0f172a; }
+        .jft-score-pin { position: absolute; top: -30px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; transition: left 0.6s ease-out; }
+        .jft-score-pin-box { background: #0f172a; color: #ffffff; font-size: 12px; font-weight: 900; padding: 1px 7px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.25); white-space: nowrap; }
+        .jft-score-pin-arrow { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #0f172a; margin-top: -1px; }
 
         .opacity-ctrl { position: fixed; bottom: 20px; left: 20px; z-index: 10000; background: rgba(0,0,0,0.6);
             padding: 8px 16px; border-radius: 50px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.15); }
@@ -589,12 +621,19 @@
                 <input type="text" id="s-name" placeholder="Full Candidate Name" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-4 rounded-xl text-sm font-bold">
                 <input type="text" id="s-reg" placeholder="Registration Number (e.g. BD-2026-9081)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-4 rounded-xl text-sm">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="date" id="s-dob" class="glass-input p-4 rounded-xl text-sm">
-                    <input type="text" id="s-loc" placeholder="Exam Center / City" value="Khulna Center" class="glass-input p-4 rounded-xl text-sm">
+                    <input type="date" id="s-dob" class="glass-input p-4 rounded-xl text-sm" value="2005-12-12">
+                    <input type="text" id="s-loc" placeholder="Exam Center / City" value="Bangladesh" class="glass-input p-4 rounded-xl text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="s-nat" placeholder="Nationality" value="Bangladesh" class="glass-input p-4 rounded-xl text-sm font-semibold">
+                    <select id="s-sex" class="glass-input p-4 rounded-xl text-sm font-semibold">
+                        <option value="Female" selected>Female (女性)</option>
+                        <option value="Male">Male (男性)</option>
+                    </select>
                 </div>
                 <div class="text-left bg-white/5 p-3 rounded-xl border border-white/10">
                     <label class="text-[11px] font-bold text-gray-300 block mb-1">Candidate Profile Photo / Passport (Optional):</label>
-                    <input type="file" id="s-photo" accept="image/*" class="text-xs block w-full text-gray-400">
+                    <input type="file" id="s-photo" accept="image/*" onchange="if(this.files[0]){const r=new FileReader();r.onload=e=>{const p=document.getElementById('res-photo');if(p)p.src=e.target.result;};r.readAsDataURL(this.files[0]);}" class="text-xs block w-full text-gray-400">
                 </div>
                 <button onclick="goToPortalChoice()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xl transition shadow-lg shadow-blue-500/30">
                     LOGIN & SELECT EXAM →
@@ -1331,32 +1370,214 @@
         </div>
 
         <div id="cert-area" class="shadow-2xl">
-            <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
-                <div>
-                    <h1 class="text-xl font-bold">Assessment Results</h1>
-                    <p class="text-xs">Japan Foundation Test for Basic Japanese (JFT-Basic)</p>
+            <!-- PAGE 1: OFFICIAL ASSESSMENT RESULTS NOTIFICATION -->
+            <div class="cert-page">
+                <!-- Header with Logo and Title -->
+                <div class="flex justify-between items-start border-b border-slate-300 pb-3 mb-5">
+                    <div class="pt-1">
+                        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-wide font-sans">国際交流基金日本語基礎テスト  判定結果通知書</h1>
+                        <p class="text-xs sm:text-sm font-bold text-slate-700 tracking-tight mt-0.5">Japan Foundation Test for Basic Japanese Notification of assessment results</p>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-4">
+                        <img src="assets/japan_foundation_logo.png" alt="JAPAN FOUNDATION 国際交流基金" class="h-10 sm:h-12 object-contain">
+                    </div>
                 </div>
-                <div class="text-right">
-                    <p class="font-bold text-blue-800 text-sm uppercase">DAI ICHI ACADEMY KHULNA</p>
-                    <p class="text-[10px] text-gray-500">Official Prometric Simulation Verification</p>
+
+                <!-- Candidate Info Section -->
+                <div class="flex gap-6 items-start mb-5 pb-4 border-b border-slate-200">
+                    <!-- Photo -->
+                    <div class="w-28 sm:w-32 flex-shrink-0 text-center">
+                        <div class="w-28 h-36 sm:w-32 sm:h-40 border border-slate-300 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center rounded-sm">
+                            <img id="res-photo" src="assets/default_avatar.svg" alt="Candidate Photo" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+
+                    <!-- Details Table -->
+                    <div class="flex-1 space-y-1 pt-0.5">
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">受験番号 <span class="cert-info-label-sub">Registration Number</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-reg">40019402</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">氏名 <span class="cert-info-label-sub">Name</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-name">Candidate Name</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">国籍 <span class="cert-info-label-sub">Nationality</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-nat">Bangladesh</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">生年月日 <span class="cert-info-label-sub">Date of Birth</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-dob">2005/12/12 (yyyy/mm/dd)</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">性別 <span class="cert-info-label-sub">Sex</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-sex">Female</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">受験地 <span class="cert-info-label-sub">Test Location</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-loc">Bangladesh</div>
+                        </div>
+                        <div class="cert-info-row">
+                            <div class="cert-info-label">受験日 <span class="cert-info-label-sub">Test Date</span></div>
+                            <span class="cert-info-colon">:</span>
+                            <div class="cert-info-value" id="cert-date">2026/05/09 (yyyy/mm/dd)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden fallback fields for JS backward-compatibility -->
+                <span id="res-name" class="hidden"></span>
+                <span id="res-reg" class="hidden"></span>
+                <span id="res-dob" class="hidden"></span>
+                <span id="res-loc" class="hidden"></span>
+                <span id="res-date" class="hidden"></span>
+                <span id="res-breakdown" class="hidden"></span>
+                <div id="total-score-fill" class="hidden"></div>
+                <div id="total-marker" class="hidden"></div>
+
+                <!-- Subtitle notice -->
+                <div class="mb-3 text-xs sm:text-sm font-bold text-slate-800">
+                    <div>試験の結果をお知らせします。</div>
+                    <div class="text-[11px] text-slate-600 font-semibold">Your test results are as follows.</div>
+                </div>
+
+                <!-- Assessment Result Box (Total Score) -->
+                <div class="jft-total-score-card">
+                    <div class="flex justify-between items-start flex-wrap gap-2 mb-2">
+                        <div>
+                            <span class="text-sm font-bold text-slate-900">総合得点 : </span>
+                            <span id="res-total" class="text-3xl font-black text-slate-900 mx-1">211</span>
+                            <span class="text-sm font-bold text-slate-900">点</span>
+                            <div class="text-[11px] text-slate-600 font-semibold">Total Score <span id="res-total-en">211</span> points</div>
+                        </div>
+                        <div class="text-right text-[11px] text-slate-600 leading-tight">
+                            <div class="font-bold text-slate-800">( 得点範囲 : 10 - 250 点 , 判定基準点 : 200 点 )</div>
+                            <div class="text-[10px] text-slate-500 font-medium">Range of Scores: 10 - 250 points, Passing Score: 200 points</div>
+                        </div>
+                    </div>
+
+                    <!-- Continuous Gradient Score Bar -->
+                    <div class="jft-score-bar-track">
+                        <!-- Score Pin -->
+                        <div id="cert-score-pin" class="jft-score-pin" style="left: 83.75%;">
+                            <div class="jft-score-pin-box"><span id="cert-score-pin-text">211</span></div>
+                            <div class="jft-score-pin-arrow"></div>
+                        </div>
+
+                        <!-- Passing Threshold Line at 200 (79.17%) -->
+                        <div class="jft-passing-line"></div>
+                        <div class="jft-passing-label">200</div>
+
+                        <!-- 10 on left, 250 on right -->
+                        <div class="absolute left-0 -bottom-5 text-[11px] font-bold text-slate-600">10</div>
+                        <div class="absolute right-0 -bottom-5 text-[11px] font-bold text-slate-600">250</div>
+                    </div>
+
+                    <!-- Official Assessment Statement -->
+                    <div id="cert-official-statement" class="mt-6 pt-3 border-t border-slate-200">
+                        <!-- Dynamically filled: Passed vs Failed statement in Japanese & English -->
+                    </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div id="result-message" class="p-3 border rounded text-xs font-bold mb-4 text-center uppercase tracking-wider"></div>
+
+                <!-- Section Scores Header -->
+                <div class="mt-4 mb-2">
+                    <div class="text-xs sm:text-sm font-bold text-slate-800">セクション毎の正答率は次のとおりです。</div>
+                    <div class="text-[11px] text-slate-600 font-semibold">The percentage of correct answers for each section are as follows.</div>
+                </div>
+
+                <!-- Individual Section Gradient Bars -->
+                <div id="cert-sections-container" class="space-y-1 bg-white rounded-lg border border-slate-200 p-3 sm:p-4">
+                    <!-- Populated dynamically with 4 authentic gradient bars -->
+                </div>
+
+                <!-- Summary Overview Grid (Questions, Correct, Wrong) -->
+                <div id="cert-summary-grid" class="mt-4">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Page 1 Footer -->
+                <div class="mt-6 pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500">
+                    <div>国際交流基金 (The Japan Foundation) • Prometric Simulation Center</div>
+                    <div>Page 1 of 2</div>
                 </div>
             </div>
-            <div class="flex gap-8 mb-8 border-b pb-6">
-                <img id="res-photo" class="w-32 h-40 border border-gray-400 bg-gray-50 object-cover">
-                <div class="flex-1 space-y-1">
-                    <div class="info-row"><span class="info-label">Name</span><span class="info-value">: <span id="res-name"></span></span></div>
-                    <div class="info-row"><span class="info-label">Reg No</span><span class="info-value">: <span id="res-reg"></span></span></div>
-                    <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-value">: <span id="res-dob"></span></span></div>
-                    <div class="info-row"><span class="info-label">Location</span><span class="info-value">: <span id="res-loc"></span></span></div>
-                    <div class="info-row"><span class="info-label">Test Date</span><span class="info-value">: <span id="res-date"></span></span></div>
+
+            <!-- PAGE 2: JAPANESE LANGUAGE PROFICIENCY (CEFR & A2 LEVEL) -->
+            <div class="cert-page border-t-8 border-slate-200 sm:border-t-0">
+                <!-- Header -->
+                <div class="flex justify-between items-center border-b border-slate-300 pb-3 mb-6">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">● 日本語能力水準の考え方</h2>
+                        <p class="text-xs font-bold text-slate-600">How to look at the level of Japanese language proficiency</p>
+                    </div>
+                    <div class="text-right">
+                        <img src="assets/japan_foundation_logo.png" alt="JAPAN FOUNDATION" class="h-8 object-contain">
+                    </div>
+                </div>
+
+                <!-- Explanation Paragraphs -->
+                <div class="space-y-3 text-xs leading-relaxed text-slate-800 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <p class="font-medium">
+                        国際交流基金日本語基礎テストは、ある程度日常会話ができ、生活に支障がない程度の日本語能力を有するかどうかを判定するものです。<br>
+                        上記の日本語能力の目安として、「JF日本語教育スタンダード」のA2レベルの言語使用者を想定しています。<br>
+                        「JF日本語教育スタンダード」の言語熟達度の尺度は、CEFRの６つのレベルに準じています。
+                    </p>
+                    <p class="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                        Japan Foundation Test for Basic Japanese assesses whether you have the Japanese language proficiency to be able to engage in everyday conversation to a certain extent and without difficulties in daily life.<br>
+                        As a reference point to the Japanese language proficiency stated above, this corresponds to language users at the A2 level of the JF Standard for Japanese-Language Education.<br>
+                        The language proficiency scale of the JF Standard for Japanese-Language Education conforms to the six levels of CEFR.
+                    </p>
+                </div>
+
+                <!-- A2 Level Descriptors -->
+                <div class="space-y-4 mb-6">
+                    <div class="border-l-4 border-amber-500 pl-4 py-1 bg-amber-50/50 rounded-r-lg p-3 border border-amber-200">
+                        <h3 class="text-sm font-black text-slate-900 mb-2">A2 レベル</h3>
+                        <ul class="list-disc list-inside space-y-1 text-xs text-slate-800 leading-relaxed font-medium">
+                            <li>ごく基本的な個人的情報や家族情報、買い物、近所、仕事など、直接的関係がある領域に関する、よく使われる文や表現が理解できる。</li>
+                            <li>簡単で日常的な範囲なら、身近で日常の事柄についての情報交換に応ずることができる。</li>
+                            <li>自分の背景や身の回りの状況や、直接的な必要性のある領域の事柄を簡単な言葉で説明できる。</li>
+                        </ul>
+                    </div>
+
+                    <div class="border-l-4 border-slate-400 pl-4 py-1 bg-slate-50 rounded-r-lg p-3 border border-slate-200">
+                        <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">A2 Level Descriptors</h3>
+                        <ul class="list-disc list-inside space-y-1 text-[11px] text-slate-600 leading-relaxed">
+                            <li>Can understand sentences and frequently used expressions related to areas of most immediate relevance (e.g. very basic personal and family information, shopping, local geography, employment).</li>
+                            <li>Can communicate in simple and routine tasks requiring a simple and direct exchange of information on familiar and routine matters.</li>
+                            <li>Can describe in simple terms aspects of his/her background, immediate environment and matters in areas of immediate need.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CEFR Global Scale Diagram -->
+                <div class="mt-4 pt-4 border-t border-slate-200">
+                    <div class="mb-3 text-center sm:text-left">
+                        <h4 class="text-xs sm:text-sm font-bold text-slate-800">CEFR の共通参照レベル：全体的な尺度</h4>
+                        <p class="text-[10.5px] text-slate-500 font-semibold">The CEFR Global Scale: Common Reference Levels</p>
+                    </div>
+                    <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center">
+                        <img src="assets/cefr_global_scale.png" alt="CEFR Global Scale A1, A2, B1, B2, C1, C2" class="max-h-56 sm:max-h-64 object-contain w-full">
+                        <p class="text-[10px] text-slate-500 font-bold mt-2 text-center">★ JFT-Basic target benchmark: A2 Level (基礎段階の言語使用者 / Basic User)</p>
+                    </div>
+                </div>
+
+                <!-- Page 2 Footer -->
+                <div class="mt-8 pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500">
+                    <div>Official Prometric Simulation &amp; Assessment Verification • Dai Ichi Academy Khulna</div>
+                    <div>Page 2 of 2</div>
                 </div>
             </div>
-            <div class="border-2 border-gray-300 p-6 mb-8 rounded-lg bg-gray-50">
-                <div class="font-bold text-sm">Total Scaled Score: <span id="res-total" class="text-3xl text-blue-700">0</span> / 250</div>
-                <div class="score-bar-container"><div id="total-score-fill" class="score-bar-fill"><div id="total-marker" class="score-marker">0</div></div></div>
-            </div>
-            <div id="result-message" class="p-4 border rounded text-xs font-bold mb-8 text-center uppercase tracking-widest"></div>
-            <div id="res-breakdown" class="space-y-4"></div>
         </div>
 
         <!-- Result Navigation Bar (Bottom) -->
@@ -4304,39 +4525,253 @@
             }
         }
 
+        // Authentic JFT-Basic 4-Section Definition
+        const JFT_CANONICAL_SECTIONS = [
+            {
+                id: 'vocab',
+                titleJa: '文字と語彙',
+                titleEn: 'Script and Vocabulary',
+                match: (name, q) => {
+                    const s = String(name || '').toLowerCase();
+                    return s.includes('vocab') || s.includes('script') || s.includes('文字') || s.includes('語彙') || s.includes('section 1');
+                }
+            },
+            {
+                id: 'convo',
+                titleJa: '会話と表現',
+                titleEn: 'Conversation and Expression',
+                match: (name, q) => {
+                    const s = String(name || '').toLowerCase();
+                    return s.includes('convo') || s.includes('conversation') || s.includes('expression') || s.includes('表現') || s.includes('会話') || s.includes('section 2');
+                }
+            },
+            {
+                id: 'listening',
+                titleJa: '聴解',
+                titleEn: 'Listening Comprehension',
+                match: (name, q) => {
+                    const s = String(name || '').toLowerCase();
+                    return s.includes('listen') || s.includes('聴解') || s.includes('おんせい') || s.includes('音声') || s.includes('section 3') || !!(q && (q.audio || q.dialogues || q.dialog));
+                }
+            },
+            {
+                id: 'reading',
+                titleJa: '読解',
+                titleEn: 'Reading Comprehension',
+                match: (name, q) => {
+                    const s = String(name || '').toLowerCase();
+                    return s.includes('read') || s.includes('読解') || s.includes('section 4') || !!(q && q.passage);
+                }
+            }
+        ];
+
+        function classifyQuestionSection(q, idx, totalQs) {
+            const sec = (q.section || q.sectionTitle || "").trim();
+            for(const jSec of JFT_CANONICAL_SECTIONS) {
+                if(jSec.match(sec, q)) return jSec.id;
+            }
+            if(totalQs > 0) {
+                const ratio = idx / totalQs;
+                if(ratio < 0.25) return 'vocab';
+                if(ratio < 0.50) return 'convo';
+                if(ratio < 0.75) return 'listening';
+                return 'reading';
+            }
+            return 'vocab';
+        }
+
+        function buildSectionGradientBar(titleJa, titleEn, pct, correctQ, totalQ) {
+            const p = Math.max(0, Math.min(100, Math.round(pct)));
+            return `
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2 border-b border-slate-100 last:border-b-0">
+                    <div class="w-full sm:w-56 flex-shrink-0">
+                        <div class="text-xs font-bold text-slate-800 leading-tight">${titleJa}</div>
+                        <div class="text-[10.5px] text-slate-500 font-medium leading-tight">${titleEn}</div>
+                    </div>
+                    <div class="flex-1 flex items-center gap-3">
+                        <div class="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-300 relative shadow-inner">
+                            <div class="h-full rounded-full transition-all duration-700 relative" style="width: ${p}%; background: linear-gradient(to right, #f97316 0%, #fbbf24 50%, #22c55e 100%);">
+                                ${p > 6 ? `<span class="absolute right-0.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm"></span>` : ''}
+                            </div>
+                        </div>
+                        <div class="w-20 flex-shrink-0 text-right">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-black ${p >= 80 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : (p >= 50 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-orange-100 text-orange-800 border border-orange-300')}">
+                                ${p}%
+                            </span>
+                            ${totalQ !== undefined ? `<span class="block text-[10px] text-slate-500 font-semibold">${correctQ || 0}/${totalQ} Qs</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function isCbtAnswerCorrect(userChoice, q) {
             if(userChoice === undefined || userChoice === null || userChoice === "") return false;
-            const correctVal = (q.correct !== undefined && q.correct !== null) ? q.correct 
-                             : ((q.answer !== undefined && q.answer !== null) ? q.answer : q.correctAnswer);
-            if(correctVal === undefined || correctVal === null || correctVal === "") return false;
+            if(!q || typeof q !== 'object') return false;
 
-            // 1. Direct equality (e.g. 2 == "2" or 2 == 2)
+            let correctVal = undefined;
+            const candidates = [
+                q.correct, q.correct_answer, q.correct_option, q.correctAnswer,
+                q.answer, q.ans, q.right_answer, q.correct_ans, q.rightOption
+            ];
+            for(const c of candidates) {
+                if(c !== undefined && c !== null && String(c).trim() !== "") {
+                    correctVal = c;
+                    break;
+                }
+            }
+            if(correctVal === undefined || correctVal === null) return false;
+
+            const uNum = Number(userChoice);
+            const cNum = Number(correctVal);
+
+            // 1. Direct equality (e.g. 1 == 1, 2 == "2")
             if(userChoice == correctVal) return true;
 
             // 2. Letter matching (A=1, B=2, C=3, D=4)
             const letterMap = { 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'a': 1, 'b': 2, 'c': 3, 'd': 4 };
             const strCorrect = String(correctVal).trim();
-            if(letterMap[strCorrect] !== undefined && Number(userChoice) === letterMap[strCorrect]) {
-                return true;
-            }
             const strChoice = String(userChoice).trim();
-            if(letterMap[strChoice] !== undefined && letterMap[strChoice] == correctVal) {
-                return true;
-            }
+            if(letterMap[strCorrect] !== undefined && uNum === letterMap[strCorrect]) return true;
+            if(letterMap[strChoice] !== undefined && letterMap[strChoice] == correctVal) return true;
+            if(letterMap[strChoice] !== undefined && letterMap[strCorrect] !== undefined && letterMap[strChoice] === letterMap[strCorrect]) return true;
 
-            // 3. Option text match (when correctVal is the full string of the correct choice)
-            if(Array.isArray(q.options)) {
-                const choiceIdx = parseInt(userChoice, 10) - 1;
+            // 3. Option text match (when correctVal is the full string of the correct choice or vice versa)
+            if(Array.isArray(q.options) && q.options.length > 0) {
+                const choiceIdx = uNum - 1;
                 if(choiceIdx >= 0 && choiceIdx < q.options.length) {
-                    const chosenOption = String(q.options[choiceIdx]).trim();
-                    if(chosenOption === strCorrect) return true;
+                    const chosenOption = String(q.options[choiceIdx]).trim().toLowerCase();
+                    if(chosenOption === strCorrect.toLowerCase()) return true;
                 }
+                const optIdx = q.options.findIndex(opt => String(opt).trim().toLowerCase() === strCorrect.toLowerCase());
+                if(optIdx !== -1 && (optIdx + 1) === uNum) return true;
             }
 
             // 4. 0-indexed number fallback (0 -> 1, 1 -> 2, etc.)
-            if(correctVal === 0 && Number(userChoice) === 1) return true;
+            if(!isNaN(cNum) && !isNaN(uNum)) {
+                if(cNum === 0 && uNum === 1) return true;
+                if(cNum + 1 === uNum && (q.zeroIndexed || cNum === 0)) return true;
+            }
 
             return false;
+        }
+
+        function renderJftCertificate(data) {
+            const scaled = data.totalScore !== undefined ? data.totalScore : 10;
+            const passMark = data.passMark || 200;
+            const isPassed = scaled >= passMark;
+            const name = (document.getElementById('s-name')?.value || "").trim() || "FATEMA ISLAM LIPY";
+            const reg = (document.getElementById('s-reg')?.value || "").trim() || "40019402";
+            const nat = (document.getElementById('s-nat')?.value || "").trim() || "Bangladesh";
+            const rawDob = document.getElementById('s-dob')?.value || "2005-12-12";
+            const dobFormatted = rawDob ? rawDob.replace(/-/g, '/') : "2005/12/12";
+            const sex = document.getElementById('s-sex')?.value || "Female";
+            const loc = (document.getElementById('s-loc')?.value || "").trim() || "Bangladesh";
+            
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const testDateFormatted = `${yyyy}/${mm}/${dd}`;
+
+            // Set candidate values
+            const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+            setTxt('cert-name', name);
+            setTxt('cert-reg', reg);
+            setTxt('cert-nat', nat);
+            setTxt('cert-dob', dobFormatted + " (yyyy/mm/dd)");
+            setTxt('cert-sex', sex);
+            setTxt('cert-loc', loc);
+            setTxt('cert-date', testDateFormatted + " (yyyy/mm/dd)");
+
+            setTxt('res-name', name);
+            setTxt('res-reg', reg);
+            setTxt('res-dob', dobFormatted);
+            setTxt('res-loc', loc);
+            setTxt('res-date', testDateFormatted);
+
+            // Total Score
+            setTxt('res-total', scaled);
+            setTxt('res-total-en', scaled);
+            setTxt('total-marker', scaled);
+
+            // Score pin position: range 10 to 250 (range length = 240)
+            const pinPct = Math.max(0, Math.min(100, ((scaled - 10) / 240) * 100));
+            const fillEl = document.getElementById('total-score-fill');
+            if(fillEl) fillEl.style.width = `${pinPct}%`;
+            const pinEl = document.getElementById('cert-score-pin');
+            if(pinEl) pinEl.style.left = `${pinPct}%`;
+            setTxt('cert-score-pin-text', scaled);
+
+            // Official assessment statement
+            const stmtBox = document.getElementById('cert-official-statement');
+            if(stmtBox) {
+                if(isPassed) {
+                    stmtBox.innerHTML = `
+                        <div class="p-3 bg-emerald-50/80 border border-emerald-200 rounded text-xs text-slate-800 leading-relaxed">
+                            <p class="font-bold text-emerald-900 mb-1">
+                                あなたは国際交流基金日本語基礎テストにおいて、ある程度日常会話ができ、生活に支障がない程度の日本語能力水準に達していると判定されました。
+                            </p>
+                            <p class="text-[11px] text-slate-600">
+                                You were assessed to have reached a level of Japanese language proficiency in Japan Foundation Test for Basic Japanese to be able to engage in everyday conversation to a certain extent and without difficulties in daily life.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    stmtBox.innerHTML = `
+                        <div class="p-3 bg-rose-50/80 border border-rose-200 rounded text-xs text-slate-800 leading-relaxed">
+                            <p class="font-bold text-rose-900 mb-1">
+                                判定：不合格 (Failed) — 基準点（${passMark}点）に達しませんでした。
+                            </p>
+                            <p class="text-[11px] text-slate-600">
+                                Your test score did not reach the passing threshold (${passMark} points). Regular study and additional practice are recommended to achieve the standard A2 level.
+                            </p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Status Badge
+            const msgEl = document.getElementById('result-message');
+            if(msgEl) {
+                msgEl.innerHTML = isPassed ? "RESULT: PASSED (合格) • CEFR A2 LEVEL ATTAINED" : "RESULT: FAILED (不合格) • BELOW 200 PTS";
+                msgEl.className = isPassed 
+                    ? "p-3 border rounded bg-emerald-50 text-emerald-800 font-bold mb-4 text-center text-xs tracking-wider border-emerald-300"
+                    : "p-3 border rounded bg-rose-50 text-rose-800 font-bold mb-4 text-center text-xs tracking-wider border-rose-300";
+            }
+
+            // Render 4 Canonical Sections
+            const secContainer = document.getElementById('cert-sections-container');
+            if(secContainer && data.secStats) {
+                const s = data.secStats;
+                let html = "";
+                const secOrder = ['vocab', 'convo', 'listening', 'reading'];
+                secOrder.forEach(k => {
+                    const item = s[k] || { titleJa: '', titleEn: '', user: 0, possible: 0, correct: 0, total: 0 };
+                    const pct = item.total > 0 ? (item.correct / item.total) * 100 : 0;
+                    html += buildSectionGradientBar(item.titleJa, item.titleEn, pct, item.correct, item.total);
+                });
+                secContainer.innerHTML = html;
+            }
+
+            // Summary Overview Grid
+            const sumEl = document.getElementById('cert-summary-grid');
+            if(sumEl) {
+                sumEl.innerHTML = `
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                        <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Total Questions</span><span class="text-sm font-black text-gray-900">${data.totalQuestions || 0}</span></div>
+                        <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Scaled Score</span><span class="text-sm font-black text-cyan-700">${scaled} / 250</span></div>
+                        <div><span class="text-[10px] text-emerald-600 font-bold uppercase block">Correct (正解)</span><span class="text-sm font-black text-emerald-700">✅ ${data.totalCorrect || 0}</span></div>
+                        <div><span class="text-[10px] text-rose-600 font-bold uppercase block">Wrong / Blank</span><span class="text-sm font-black text-rose-700">❌ ${(data.totalQuestions || 0) - (data.totalCorrect || 0)}</span></div>
+                    </div>
+                `;
+            }
+
+            // Fallback for photo
+            const photoEl = document.getElementById('res-photo');
+            if(photoEl && (!photoEl.src || photoEl.src === window.location.href)) {
+                photoEl.src = "assets/default_avatar.svg";
+            }
         }
 
         async function finishCbtExam() {
@@ -4354,17 +4789,22 @@
 
             let grandTotal = 0, userScore = 0;
             let totalCorrect = 0, totalAnswered = 0;
-            const secStats = {};
+            const secStats = {
+                vocab: { titleJa: '文字と語彙', titleEn: 'Script and Vocabulary', user: 0, possible: 0, correct: 0, total: 0 },
+                convo: { titleJa: '会話と表現', titleEn: 'Conversation and Expression', user: 0, possible: 0, correct: 0, total: 0 },
+                listening: { titleJa: '聴解', titleEn: 'Listening Comprehension', user: 0, possible: 0, correct: 0, total: 0 },
+                reading: { titleJa: '読解', titleEn: 'Reading Comprehension', user: 0, possible: 0, correct: 0, total: 0 }
+            };
 
             cbtQuestions.forEach((q, idx) => {
                 const qKey = q.id || `q_${idx}`;
+                if(!q.id) q.id = qKey;
                 const m = parseInt(q.mark, 10) || 5;
                 grandTotal += m;
 
-                const secName = (q.section || "General").trim();
-                if(!secStats[secName]) secStats[secName] = { user: 0, possible: 0, correctCount: 0, totalCount: 0 };
-                secStats[secName].possible += m;
-                secStats[secName].totalCount++;
+                const secId = classifyQuestionSection(q, idx, cbtQuestions.length);
+                secStats[secId].total++;
+                secStats[secId].possible += m;
 
                 const userChoice = cbtAnswers[qKey] !== undefined ? cbtAnswers[qKey]
                                  : (cbtAnswers[q.id] !== undefined ? cbtAnswers[q.id]
@@ -4376,58 +4816,47 @@
                     if(isCbtAnswerCorrect(userChoice, q)) {
                         userScore += m;
                         totalCorrect++;
-                        secStats[secName].user += m;
-                        secStats[secName].correctCount++;
+                        secStats[secId].correct++;
+                        secStats[secId].user += m;
                     }
                 }
             });
 
             grandTotal = Math.max(grandTotal, 1);
             const passMarkVal = parseInt(activeCbtExam ? activeCbtExam.passMark : 200, 10) || 200;
-            const scaled = Math.min(250, Math.round((userScore / grandTotal) * 250));
+            
+            // Official JFT-Basic scaled score: range 10 to 250 points (passing mark 200 points)
+            let scaled = 10;
+            if(totalCorrect > 0) {
+                scaled = Math.max(10, Math.min(250, Math.round(10 + (userScore / grandTotal) * 240)));
+            }
             const isPassed = scaled >= passMarkVal;
 
-            let sectionHTML = "";
-            const sectionListForSub = [];
-            Object.keys(secStats).forEach(secName => {
-                const s = secStats[secName];
-                sectionHTML += buildRow(secName, s.user, s.possible, s.correctCount, s.totalCount);
-                sectionListForSub.push({
-                    name: secName,
+            const sectionListForSub = Object.keys(secStats).map(secKey => {
+                const s = secStats[secKey];
+                return {
+                    name: `${s.titleJa} (${s.titleEn})`,
                     score: s.user,
                     total: s.possible,
-                    percent: Math.round((s.user / (s.possible || 1)) * 100),
-                    correctCount: s.correctCount,
-                    totalCount: s.totalCount
-                });
+                    percent: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0,
+                    correctCount: s.correct,
+                    totalCount: s.total
+                };
             });
 
-            // Display results on screen
-            document.getElementById('res-total').innerText = scaled;
-            document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
-            document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
-            document.getElementById('res-dob').innerText = document.getElementById('s-dob')?.value || "";
-            document.getElementById('res-loc').innerText = document.getElementById('s-loc')?.value || "";
-            document.getElementById('res-date').innerText = new Date().toLocaleDateString();
-            document.getElementById('total-score-fill').style.width = (scaled / 250 * 100) + "%";
-            document.getElementById('total-marker').innerText = scaled;
+            // Render Official JFT Certificate
+            renderJftCertificate({
+                totalScore: scaled,
+                maxScore: 250,
+                passMark: passMarkVal,
+                isPassed: isPassed,
+                totalCorrect: totalCorrect,
+                totalQuestions: cbtQuestions.length,
+                secStats: secStats,
+                examTitle: activeCbtExam ? activeCbtExam.title : "JFT-Basic CBT Exam"
+            });
 
-            const msg = document.getElementById('result-message');
-            msg.innerHTML = isPassed ? "RESULT: PASSED (合格)" : "RESULT: FAILED (不合格)";
-            msg.className = isPassed ? "p-4 border rounded bg-green-50 text-green-800 font-bold mb-8 text-center" : "p-4 border rounded bg-red-50 text-red-800 font-bold mb-8 text-center";
-            
-            // Render summary breakdown
-            const summaryHTML = `
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
-                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Total Questions</span><span class="text-sm font-black text-gray-900">${cbtQuestions.length}</span></div>
-                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Answered</span><span class="text-sm font-black text-sky-700">${totalAnswered} / ${cbtQuestions.length}</span></div>
-                    <div><span class="text-[10px] text-emerald-600 font-bold uppercase block">Correct (正解)</span><span class="text-sm font-black text-emerald-700">✅ ${totalCorrect}</span></div>
-                    <div><span class="text-[10px] text-rose-600 font-bold uppercase block">Wrong / Unanswered</span><span class="text-sm font-black text-rose-700">❌ ${cbtQuestions.length - totalCorrect}</span></div>
-                </div>
-            `;
-            document.getElementById('res-breakdown').innerHTML = summaryHTML + sectionHTML;
-
-            // Submit exam results to PostgreSQL backend (users, exam_submissions, submission_answers)
+            // Submit exam results to PostgreSQL backend
             try {
                 const submissionQuestions = cbtQuestions.map((q, idx) => {
                     const qKey = q.id || `q_${idx}`;
@@ -4447,8 +4876,8 @@
                 });
 
                 const subPayload = {
-                    candidate_id: (document.getElementById('s-reg').value || "").trim() || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
-                    full_name: (document.getElementById('s-name').value || "").trim() || "Candidate",
+                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
+                    full_name: (document.getElementById('s-name')?.value || "").trim() || "Candidate",
                     password: "password",
                     dob: document.getElementById('s-dob')?.value || "",
                     location: document.getElementById('s-loc')?.value || "",
@@ -4477,6 +4906,7 @@
             document.getElementById('cbt-exam-ui').classList.add('hidden');
             document.getElementById('top-nav-bar').classList.remove('hidden');
             document.getElementById('result-ui').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
         // --- SUBMISSIONS MONITOR & POSTGRESQL ANSWER SHEET VIEWER (ADMIN) ---
@@ -4910,12 +5340,16 @@
 
         function downloadPDF() {
             const element = document.getElementById('cert-area');
-            html2pdf().from(element).set({
+            const candidateName = (document.getElementById('s-name')?.value || 'Candidate').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+            const opt = {
                 margin: 0,
-                filename: 'JFT_CBT_Result_' + (document.getElementById('s-name').value || 'Candidate') + '.pdf',
-                html2canvas: { scale: 3 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).save();
+                filename: `JFT_Basic_Assessment_Results_${candidateName}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+            html2pdf().set(opt).from(element).save();
         }
 
         // --- RESULT SCREEN NAVIGATION & RETEST LOGIC ---
@@ -5368,13 +5802,15 @@
             container.innerHTML = "";
             let currentMark = 1;
             let qIdx = 1;
-            config.forEach((item) => {
+            config.forEach((item, index) => {
+                const qKey = item.id || `q_${index}`;
+                item.id = qKey;
                 if(item.type === 's') {
-                    currentMark = item.fixedMark;
+                    currentMark = item.fixedMark || 1;
                     container.innerHTML += `<div class="p-3 bg-blue-600/40 rounded-lg border border-blue-400 text-xs font-bold uppercase mb-2">${item.title}</div>`;
                 } else {
                     item.assignedMark = currentMark;
-                    const isSelected = userAnswers[item.id];
+                    const isSelected = userAnswers[qKey] !== undefined ? userAnswers[qKey] : userAnswers[item.id];
                     container.innerHTML += `
                         <div class="p-5 glass-panel border-l-4 border-blue-500">
                             <div class="flex justify-between text-[10px] mb-3 font-bold text-blue-300">
@@ -5384,7 +5820,7 @@
                             ${item.audio ? `<audio src="${item.audio}" controls class="w-full h-8 mb-3 opacity-80"></audio>` : ''}
                             <div class="flex justify-between gap-2">
                                 ${[1,2,3,4].map(n => `
-                                    <button onclick="record('${item.id}', ${n}, this)" class="option-btn border border-white/20 p-2 flex-1 rounded-xl glass-input font-bold hover:bg-white/10 transition ${isSelected == n ? 'selected-ans' : ''}">
+                                    <button onclick="record('${qKey}', ${n}, this)" class="option-btn border border-white/20 p-2 flex-1 rounded-xl glass-input font-bold hover:bg-white/10 transition ${isSelected == n ? 'selected-ans' : ''}">
                                         ${n}
                                     </button>
                                 `).join('')}
@@ -5414,65 +5850,84 @@
 
         function finishExam() {
             clearModelSession();
-            let grandTotal = 0, userScore = 0, sectionHTML = "";
-            let curName = "", curPossible = 0, curUser = 0;
-            let curCorrect = 0, curTotal = 0;
+            let grandTotal = 0, userScore = 0;
             let totalCorrect = 0, totalQuestions = 0;
-            const passMarkVal = parseInt(document.getElementById('pass-mark').value) || 200;
+            const passMarkVal = parseInt(document.getElementById('pass-mark')?.value, 10) || 200;
+
+            const secStats = {
+                vocab: { titleJa: '文字と語彙', titleEn: 'Script and Vocabulary', user: 0, possible: 0, correct: 0, total: 0 },
+                convo: { titleJa: '会話と表現', titleEn: 'Conversation and Expression', user: 0, possible: 0, correct: 0, total: 0 },
+                listening: { titleJa: '聴解', titleEn: 'Listening Comprehension', user: 0, possible: 0, correct: 0, total: 0 },
+                reading: { titleJa: '読解', titleEn: 'Reading Comprehension', user: 0, possible: 0, correct: 0, total: 0 }
+            };
+
+            const questionsOnly = config.filter(it => it.type !== 's');
+            let qIdx = 0;
+            let curSecTitle = "";
 
             config.forEach((item, index) => {
                 if(item.type === 's') {
-                    if(curName !== "") sectionHTML += buildRow(curName, curUser, curPossible, curCorrect, curTotal);
-                    curName = item.title; curPossible = 0; curUser = 0; curCorrect = 0; curTotal = 0;
+                    curSecTitle = item.title || "";
                 } else {
                     totalQuestions++;
-                    curTotal++;
-                    let m = parseInt(item.assignedMark || item.mark, 10) || 5;
-                    curPossible += m; grandTotal += m;
-                    if(isCbtAnswerCorrect(userAnswers[item.id], item)) {
-                        curUser += m;
-                        userScore += m;
-                        curCorrect++;
-                        totalCorrect++;
+                    const qKey = item.id || `q_${index}`;
+                    item.id = qKey;
+                    const m = parseInt(item.assignedMark || item.mark, 10) || 5;
+                    grandTotal += m;
+
+                    item.section = item.section || curSecTitle;
+                    const secId = classifyQuestionSection(item, qIdx++, questionsOnly.length);
+                    secStats[secId].total++;
+                    secStats[secId].possible += m;
+
+                    const userChoice = userAnswers[qKey] !== undefined ? userAnswers[qKey]
+                                     : (userAnswers[item.id] !== undefined ? userAnswers[item.id]
+                                     : (userAnswers[`q_${index}`] !== undefined ? userAnswers[`q_${index}`]
+                                     : userAnswers[index]));
+
+                    if(userChoice !== undefined && userChoice !== null && userChoice !== "") {
+                        if(isCbtAnswerCorrect(userChoice, item)) {
+                            userScore += m;
+                            totalCorrect++;
+                            secStats[secId].correct++;
+                            secStats[secId].user += m;
+                        }
                     }
                 }
-                if(index === config.length - 1) sectionHTML += buildRow(curName, curUser, curPossible, curCorrect, curTotal);
             });
-            let scaled = Math.min(250, Math.round((userScore / (grandTotal || 1)) * 250));
-            document.getElementById('res-total').innerText = scaled;
-            document.getElementById('res-name').innerText = document.getElementById('s-name')?.value || "Candidate";
-            document.getElementById('res-reg').innerText = document.getElementById('s-reg')?.value || "JFT-TEST";
-            document.getElementById('res-dob').innerText = document.getElementById('s-dob')?.value || "";
-            document.getElementById('res-loc').innerText = document.getElementById('s-loc')?.value || "";
-            document.getElementById('res-date').innerText = new Date().toLocaleDateString();
-            document.getElementById('total-score-fill').style.width = (scaled/250 * 100) + "%";
-            document.getElementById('total-marker').innerText = scaled;
-            const msg = document.getElementById('result-message');
-            msg.innerHTML = scaled >= passMarkVal ? "RESULT: PASSED (合格)" : "RESULT: FAILED (不合格)";
-            msg.className = scaled >= passMarkVal ? "p-4 border rounded bg-green-50 text-green-800 font-bold mb-8 text-center" : "p-4 border rounded bg-red-50 text-red-800 font-bold mb-8 text-center";
-            
-            const summaryHTML = `
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
-                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Total Questions</span><span class="text-sm font-black text-gray-900">${totalQuestions}</span></div>
-                    <div><span class="text-[10px] text-gray-500 font-bold uppercase block">Answered</span><span class="text-sm font-black text-sky-700">${Object.keys(userAnswers).length} / ${totalQuestions}</span></div>
-                    <div><span class="text-[10px] text-emerald-600 font-bold uppercase block">Correct (正解)</span><span class="text-sm font-black text-emerald-700">✅ ${totalCorrect}</span></div>
-                    <div><span class="text-[10px] text-rose-600 font-bold uppercase block">Wrong / Unanswered</span><span class="text-sm font-black text-rose-700">❌ ${totalQuestions - totalCorrect}</span></div>
-                </div>
-            `;
-            document.getElementById('res-breakdown').innerHTML = summaryHTML + sectionHTML;
+
+            grandTotal = Math.max(grandTotal, 1);
+            let scaled = 10;
+            if(totalCorrect > 0) {
+                scaled = Math.max(10, Math.min(250, Math.round(10 + (userScore / grandTotal) * 240)));
+            }
+            const isPassed = scaled >= passMarkVal;
+
+            // Render Official JFT Certificate
+            renderJftCertificate({
+                totalScore: scaled,
+                maxScore: 250,
+                passMark: passMarkVal,
+                isPassed: isPassed,
+                totalCorrect: totalCorrect,
+                totalQuestions: totalQuestions,
+                secStats: secStats,
+                examTitle: document.getElementById('confirm-model-name')?.innerText || "Model Test"
+            });
 
             // Save Model Test submission to PostgreSQL backend
             try {
                 const modelSubmissionQuestions = [];
                 let qNum = 1;
-                config.forEach(item => {
-                    if(item.type === 'q') {
-                        const sel = userAnswers[item.id];
+                config.forEach((item, idx) => {
+                    if(item.type !== 's') {
+                        const qKey = item.id || `q_${idx}`;
+                        const sel = userAnswers[qKey] !== undefined ? userAnswers[qKey] : userAnswers[item.id];
                         modelSubmissionQuestions.push({
                             question_number: qNum++,
-                            section_name: item.sectionTitle || curName || "Model Test",
-                            question_text: `Question ${qNum - 1}`,
-                            options: ["1", "2", "3", "4"],
+                            section_name: item.section || curSecTitle || "Model Test",
+                            question_text: item.question || `Question ${qNum - 1}`,
+                            options: item.options || ["1", "2", "3", "4"],
                             selected_option: sel !== undefined ? sel : null,
                             correct_option: item.correct,
                             mark: parseInt(item.assignedMark, 10) || 1
@@ -5491,7 +5946,7 @@
                     totalScore: scaled,
                     maxScore: 250,
                     passMark: passMarkVal,
-                    isPassed: scaled >= passMarkVal,
+                    isPassed: isPassed,
                     questions: modelSubmissionQuestions,
                     date: new Date().toLocaleString()
                 };
@@ -5508,6 +5963,7 @@
             document.getElementById('exam-ui').classList.add('hidden');
             document.getElementById('top-nav-bar').classList.remove('hidden');
             document.getElementById('result-ui').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
         // --- BACKGROUND & GLASS TRANSPARENCY CONTROLS ---
