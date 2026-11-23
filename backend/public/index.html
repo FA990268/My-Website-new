@@ -410,10 +410,7 @@
                 <button onclick="syncMockTestsFromSupabase(true)" id="btn-sync-supabase" class="px-4 py-2.5 rounded-full text-xs font-bold transition bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 border border-cyan-400/40 shadow-sm flex items-center gap-1.5" title="Fetch latest Mock Tests from Supabase Cloud Table">
                     <span>⚡ Sync from Supabase</span>
                 </button>
-                <label for="mock-quick-upload" class="cursor-pointer px-4 py-2.5 rounded-full text-xs font-bold transition bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-400/40 shadow-sm flex items-center gap-1.5">
-                    <span>📤 Upload Model Test (.json)</span>
-                    <input type="file" id="mock-quick-upload" accept=".json,application/json" onchange="handleUnifiedCbtUpload(this)" class="hidden">
-                </label>
+
             </div>
         </div>
 
@@ -614,29 +611,47 @@
     <section id="login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24">
         <div class="glass-panel p-8 w-full max-w-lg text-center">
             <div class="inline-block bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold mb-4">DAI ICHI ACADEMY KHULNA • CBT CENTER</div>
-            <h2 class="text-3xl font-black mb-2 italic">STUDENT CANDIDATE LOGIN</h2>
-            <p class="text-xs text-gray-400 mb-4">Enter candidate information to initialize official CBT exam session</p>
-            <div id="login-pending-hint" class="hidden bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 p-2.5 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2"></div>
+            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">CANDIDATE REGISTRATION (পরীক্ষার্থী নিবন্ধন)</h2>
+            <p class="text-xs text-gray-300 mb-4">JFT সার্টিফিকেট ও অনলাইন পরীক্ষার জন্য আপনার সঠিক তথ্য প্রদান করুন</p>
+            <div id="login-pending-hint" class="hidden bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 p-3 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2"></div>
             <div class="space-y-4">
-                <input type="text" id="s-name" placeholder="Full Candidate Name" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-4 rounded-xl text-sm font-bold">
-                <input type="text" id="s-reg" placeholder="Registration Number (e.g. BD-2026-9081)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-4 rounded-xl text-sm">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="date" id="s-dob" class="glass-input p-4 rounded-xl text-sm" value="2005-12-12">
-                    <input type="text" id="s-loc" placeholder="Exam Center / City" value="Bangladesh" class="glass-input p-4 rounded-xl text-sm">
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-gray-300 block mb-1">氏名 / Candidate Full Name <span class="text-rose-400">*</span></label>
+                    <input type="text" id="s-name" placeholder="Full Candidate Name (e.g. FATEMA ISLAM LIPY)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-3.5 rounded-xl text-sm font-bold">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="text" id="s-nat" placeholder="Nationality" value="Bangladesh" class="glass-input p-4 rounded-xl text-sm font-semibold">
-                    <select id="s-sex" class="glass-input p-4 rounded-xl text-sm font-semibold">
-                        <option value="Female" selected>Female (女性)</option>
-                        <option value="Male">Male (男性)</option>
-                    </select>
+                <div class="text-left">
+                    <label class="text-[11px] font-bold text-gray-300 block mb-1">受験番号 / Registration No. <span class="text-rose-400">*</span></label>
+                    <input type="text" id="s-reg" placeholder="Registration Number (e.g. 40019402 or BD-2026-9081)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-3.5 rounded-xl text-sm font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-left">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-300 block mb-1">生年月日 / Date of Birth</label>
+                        <input type="date" id="s-dob" class="glass-input w-full p-3 rounded-xl text-sm" value="2005-12-12">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-300 block mb-1">受験地 / Test Location</label>
+                        <input type="text" id="s-loc" placeholder="Location (e.g. Bangladesh)" value="Bangladesh" class="glass-input w-full p-3 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-left">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-300 block mb-1">国籍 / Nationality</label>
+                        <input type="text" id="s-nat" placeholder="Nationality" value="Bangladesh" class="glass-input w-full p-3 rounded-xl text-sm font-semibold">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-300 block mb-1">性別 / Sex</label>
+                        <select id="s-sex" class="glass-input w-full p-3 rounded-xl text-sm font-semibold">
+                            <option value="Female" selected>Female (女性)</option>
+                            <option value="Male">Male (男性)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="text-left bg-white/5 p-3 rounded-xl border border-white/10">
-                    <label class="text-[11px] font-bold text-gray-300 block mb-1">Candidate Profile Photo / Passport (Optional):</label>
-                    <input type="file" id="s-photo" accept="image/*" onchange="if(this.files[0]){const r=new FileReader();r.onload=e=>{const p=document.getElementById('res-photo');if(p)p.src=e.target.result;};r.readAsDataURL(this.files[0]);}" class="text-xs block w-full text-gray-400">
+                    <label class="text-[11px] font-bold text-gray-300 block mb-1">写真 / Candidate Photo (Optional, used on JFT Certificate):</label>
+                    <input type="file" id="s-photo" accept="image/*" class="text-xs block w-full text-gray-400">
                 </div>
-                <button onclick="goToPortalChoice()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xl transition shadow-lg shadow-blue-500/30">
-                    LOGIN & SELECT EXAM →
+                <button onclick="goToPortalChoice()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-2xl font-black text-base sm:text-lg transition shadow-lg shadow-blue-500/30">
+                    REGISTER &amp; START EXAM →
                 </button>
                 <button onclick="navigateTo('home')" class="w-full text-xs text-gray-400 hover:text-white py-2 transition font-bold">
                     ← Back to Home Page
@@ -1742,6 +1757,27 @@
             try { renderGroupOptions(); } catch(e) {}
             try { renderAdminModelList(); } catch(e) {}
             try { checkStoredBg(); } catch(e) {}
+            try { loadCandidateProfile(); } catch(e) {}
+            const photoInputEl = document.getElementById('s-photo');
+            if(photoInputEl && !photoInputEl.dataset.bound) {
+                photoInputEl.dataset.bound = "true";
+                photoInputEl.addEventListener('change', function() {
+                    if(this.files && this.files[0]) {
+                        const r = new FileReader();
+                        r.onload = e => {
+                            const p = document.getElementById('res-photo');
+                            if(p) p.src = e.target.result;
+                            try {
+                                const prof = JSON.parse(localStorage.getItem('jft_candidate_profile_v1') || localStorage.getItem('jft_candidate_profile') || '{}');
+                                prof.photo = e.target.result;
+                                localStorage.setItem('jft_candidate_profile_v1', JSON.stringify(prof));
+                                localStorage.setItem('jft_candidate_profile', JSON.stringify(prof));
+                            } catch(err) {}
+                        };
+                        r.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
             try { await fetchSiteSettingsFromSupabase(); } catch(e) { console.warn("Supabase site settings load note:", e); }
             try { await fetchNetworkInfo(); } catch(e) { console.warn("Network info fetch warning:", e); }
             try { await fetchVoices(); } catch(e) { console.warn("Voice catalog fetch warning:", e); }
@@ -2674,14 +2710,10 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${exam.data?.passMark || 200}/250</b></div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 mt-auto">
-                                <button onclick="launchCbtFromCard('${exam.id}')" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
+                            <div class="mt-auto">
+                                <button onclick="launchCbtFromCard('${exam.id}')" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
                                     <span>START CBT EXAM</span>
                                     <span>→</span>
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteCbtExam('${exam.id}', '${encodeURIComponent(exam.title)}')" title="Delete CBT Exam" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
-                                    <span>🗑️</span>
-                                    <span class="text-[11px]">Delete</span>
                                 </button>
                             </div>
                         </div>
@@ -2718,14 +2750,10 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Group / Pass</span><b class="text-purple-300">${exam.group || 'N/A'} (${mPass})</b></div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 mt-auto">
-                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
+                            <div class="mt-auto">
+                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
                                     <span>START MODEL TEST</span>
                                     <span>→</span>
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteModelExam(${idx})" title="Delete Model Test" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
-                                    <span>🗑️</span>
-                                    <span class="text-[11px]">Delete</span>
                                 </button>
                             </div>
                         </div>
@@ -2803,14 +2831,10 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${pass}/250</b></div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 mt-auto">
-                                <button onclick="launchCbtFromCard('${exam.id}')" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
+                            <div class="mt-auto">
+                                <button onclick="launchCbtFromCard('${exam.id}')" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-cyan-500/20 flex items-center justify-center gap-2">
                                     <span>START CBT EXAM</span>
                                     <span>→</span>
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteCbtExam('${exam.id}', '${encodeURIComponent(exam.title)}')" title="Delete CBT Exam" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
-                                    <span>🗑️</span>
-                                    <span class="text-[11px]">Delete</span>
                                 </button>
                             </div>
                         </div>
@@ -2847,14 +2871,10 @@
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Group / Pass</span><b class="text-purple-300">${exam.group || 'N/A'} (${mPass})</b></div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 mt-auto">
-                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
+                            <div class="mt-auto">
+                                <button onclick="launchModelFromCard('${exam.group}', ${idx})" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-xl font-black text-xs transition shadow-md shadow-purple-500/20 flex items-center justify-center gap-2">
                                     <span>START MODEL TEST</span>
                                     <span>→</span>
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteModelExam(${idx})" title="Delete Model Test" class="px-3.5 py-3 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm">
-                                    <span>🗑️</span>
-                                    <span class="text-[11px]">Delete</span>
                                 </button>
                             </div>
                         </div>
@@ -2878,20 +2898,100 @@
             container.innerHTML = cardsHtml;
         }
 
+        const CANDIDATE_PROFILE_KEY = 'jft_candidate_profile_v1';
+
+        function loadCandidateProfile() {
+            try {
+                const raw = localStorage.getItem(CANDIDATE_PROFILE_KEY) || localStorage.getItem('jft_candidate_profile');
+                if(!raw) return null;
+                const p = JSON.parse(raw);
+                if(p && p.name) {
+                    const setVal = (id, v) => { const el = document.getElementById(id); if(el && v !== undefined && v !== null) el.value = v; };
+                    setVal('s-name', p.name);
+                    setVal('s-reg', p.reg || '');
+                    setVal('s-dob', p.dob || '2005-12-12');
+                    setVal('s-loc', p.loc || 'Bangladesh');
+                    setVal('s-nat', p.nat || 'Bangladesh');
+                    setVal('s-sex', p.sex || 'Female');
+                    if(p.photo && p.photo.startsWith('data:image')) {
+                        const resPhoto = document.getElementById('res-photo');
+                        if(resPhoto) resPhoto.src = p.photo;
+                    }
+                    return p;
+                }
+            } catch(e) {
+                console.warn("Failed to load candidate profile", e);
+            }
+            return null;
+        }
+
+        function saveCandidateProfile() {
+            const name = (document.getElementById('s-name')?.value || "").trim();
+            const reg = (document.getElementById('s-reg')?.value || "").trim();
+            const dob = document.getElementById('s-dob')?.value || "2005-12-12";
+            const loc = (document.getElementById('s-loc')?.value || "").trim() || "Bangladesh";
+            const nat = (document.getElementById('s-nat')?.value || "").trim() || "Bangladesh";
+            const sex = document.getElementById('s-sex')?.value || "Female";
+            const photoEl = document.getElementById('res-photo');
+            const photoData = (photoEl && photoEl.src && photoEl.src.startsWith('data:image')) ? photoEl.src : "";
+
+            if(!name || name.toLowerCase() === 'candidate') {
+                alert("দয়া করে JFT সার্টিফিকেটের জন্য আপনার পূর্ণ নাম (Candidate Full Name) প্রদান করুন।");
+                const el = document.getElementById('s-name');
+                if(el) { el.focus(); el.classList.add('ring-2', 'ring-rose-500'); }
+                return false;
+            }
+            if(!reg) {
+                alert("দয়া করে JFT সার্টিফিকেটের জন্য আপনার রেজিস্ট্রেশন নম্বর (Registration Number) প্রদান করুন।");
+                const el = document.getElementById('s-reg');
+                if(el) { el.focus(); el.classList.add('ring-2', 'ring-rose-500'); }
+                return false;
+            }
+
+            const profile = { name, reg, dob, loc, nat, sex, photo: photoData };
+            localStorage.setItem(CANDIDATE_PROFILE_KEY, JSON.stringify(profile));
+            localStorage.setItem('jft_candidate_profile', JSON.stringify(profile));
+            return true;
+        }
+
+        function hasValidCandidateProfile() {
+            const curName = (document.getElementById('s-name')?.value || "").trim();
+            const curReg = (document.getElementById('s-reg')?.value || "").trim();
+            if(curName && curName.toLowerCase() !== 'candidate' && curReg) return true;
+            const prof = loadCandidateProfile();
+            if(prof && prof.name && prof.name.toLowerCase() !== 'candidate' && prof.reg) return true;
+            return false;
+        }
+
+        function promptCandidateRegistration(pending) {
+            if(pending) pendingExamLaunch = pending;
+            navigateTo('login');
+            const hint = document.getElementById('login-pending-hint');
+            if(hint) {
+                hint.innerHTML = `<span>📋</span> JFT সার্টিফিকেটের জন্য প্রথমে আপনার পরীক্ষার্থী তথ্য দিয়ে রেজিস্ট্রেশন সম্পন্ন করুন।`;
+                hint.classList.remove('hidden');
+            }
+            const nameInput = document.getElementById('s-name');
+            if(nameInput) {
+                nameInput.focus();
+                nameInput.classList.add('ring-2', 'ring-cyan-400');
+            }
+        }
+
         let pendingExamLaunch = null;
 
         function launchCbtFromCard(examId) {
-            const nameInput = document.getElementById('s-name');
-            if(nameInput && !nameInput.value.trim()) {
-                nameInput.value = "Candidate";
+            if(!hasValidCandidateProfile()) {
+                promptCandidateRegistration({ type: 'cbt', id: examId });
+                return;
             }
             selectCbtExam(examId);
         }
 
         function launchModelFromCard(group, idx) {
-            const nameInput = document.getElementById('s-name');
-            if(nameInput && !nameInput.value.trim()) {
-                nameInput.value = "Candidate";
+            if(!hasValidCandidateProfile()) {
+                promptCandidateRegistration({ type: 'model', group: group, idx: idx });
+                return;
             }
             openExam(group, idx);
         }
@@ -3011,11 +3111,8 @@
 
         // --- NAVIGATION FLOW ---
         function goToPortalChoice() {
-            const nameInput = document.getElementById('s-name');
-            let name = nameInput ? nameInput.value.trim() : "";
-            if(!name) {
-                name = "Candidate " + Math.floor(100 + Math.random()*900);
-                if(nameInput) nameInput.value = name;
+            if(!saveCandidateProfile()) {
+                return;
             }
             document.getElementById('login-sec').classList.add('hidden');
             const hint = document.getElementById('login-pending-hint');
@@ -3670,9 +3767,9 @@
         }
 
         function selectCbtExam(id) {
-            const nameInput = document.getElementById('s-name');
-            if(nameInput && !nameInput.value.trim()) {
-                nameInput.value = "Candidate";
+            if(!hasValidCandidateProfile()) {
+                promptCandidateRegistration({ type: 'cbt', id: id });
+                return;
             }
 
             let found = (allCbtExams || []).find(x => String(x.id) === String(id) || x.id === id);
@@ -3770,7 +3867,8 @@
             if(headTitle) headTitle.innerText = activeCbtExam.title || activeCbtExam.data?.title || "JFT-Basic Official Prometric CBT Exam";
 
             const candName = document.getElementById('cbt-candidate-name');
-            const sNameVal = document.getElementById('s-name')?.value?.trim();
+            const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
+            const sNameVal = document.getElementById('s-name')?.value?.trim() || prof.name;
             if(candName) candName.innerText = sNameVal || "CANDIDATE";
 
             renderCbtQuestion();
@@ -3783,9 +3881,9 @@
         }
 
         function openExam(group, idx) {
-            const nameInput = document.getElementById('s-name');
-            if(nameInput && !nameInput.value.trim()) {
-                nameInput.value = "Candidate";
+            if(!hasValidCandidateProfile()) {
+                promptCandidateRegistration({ type: 'model', group: group, idx: idx });
+                return;
             }
             const found = allExams[idx] || (allExams || []).find(e => e.group === group);
             if(!found) {
@@ -4657,16 +4755,17 @@
         }
 
         function renderJftCertificate(data) {
-            const scaled = data.totalScore !== undefined ? data.totalScore : 10;
+            const scaled = (data.totalScore !== undefined && data.totalScore !== null) ? data.totalScore : 0;
             const passMark = data.passMark || 200;
-            const isPassed = scaled >= passMark;
-            const name = (document.getElementById('s-name')?.value || "").trim() || "FATEMA ISLAM LIPY";
-            const reg = (document.getElementById('s-reg')?.value || "").trim() || "40019402";
-            const nat = (document.getElementById('s-nat')?.value || "").trim() || "Bangladesh";
-            const rawDob = document.getElementById('s-dob')?.value || "2005-12-12";
+            const isPassed = scaled >= passMark && scaled > 0;
+            const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
+            const name = (document.getElementById('s-name')?.value || "").trim() || prof.name || "FATEMA ISLAM LIPY";
+            const reg = (document.getElementById('s-reg')?.value || "").trim() || prof.reg || "40019402";
+            const nat = (document.getElementById('s-nat')?.value || "").trim() || prof.nat || "Bangladesh";
+            const rawDob = document.getElementById('s-dob')?.value || prof.dob || "2005-12-12";
             const dobFormatted = rawDob ? rawDob.replace(/-/g, '/') : "2005/12/12";
-            const sex = document.getElementById('s-sex')?.value || "Female";
-            const loc = (document.getElementById('s-loc')?.value || "").trim() || "Bangladesh";
+            const sex = document.getElementById('s-sex')?.value || prof.sex || "Female";
+            const loc = (document.getElementById('s-loc')?.value || "").trim() || prof.loc || "Bangladesh";
             
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -4695,8 +4794,8 @@
             setTxt('res-total-en', scaled);
             setTxt('total-marker', scaled);
 
-            // Score pin position: range 10 to 250 (range length = 240)
-            const pinPct = Math.max(0, Math.min(100, ((scaled - 10) / 240) * 100));
+            // Score pin position: range 0 to 250 (0 if no score, up to 100%)
+            const pinPct = scaled > 0 ? Math.max(0, Math.min(100, (scaled / 250) * 100)) : 0;
             const fillEl = document.getElementById('total-score-fill');
             if(fillEl) fillEl.style.width = `${pinPct}%`;
             const pinEl = document.getElementById('cert-score-pin');
@@ -4825,12 +4924,13 @@
             grandTotal = Math.max(grandTotal, 1);
             const passMarkVal = parseInt(activeCbtExam ? activeCbtExam.passMark : 200, 10) || 200;
             
-            // Official JFT-Basic scaled score: range 10 to 250 points (passing mark 200 points)
-            let scaled = 10;
+            // JFT-Basic scaled score: 0 to 250 points.
+            // If totalCorrect === 0 or no questions answered, scaled is strictly 0.
+            let scaled = 0;
             if(totalCorrect > 0) {
-                scaled = Math.max(10, Math.min(250, Math.round(10 + (userScore / grandTotal) * 240)));
+                scaled = Math.max(1, Math.min(250, Math.round((userScore / grandTotal) * 250)));
             }
-            const isPassed = scaled >= passMarkVal;
+            const isPassed = scaled >= passMarkVal && scaled > 0;
 
             const sectionListForSub = Object.keys(secStats).map(secKey => {
                 const s = secStats[secKey];
@@ -4875,12 +4975,13 @@
                     };
                 });
 
+                const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
                 const subPayload = {
-                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
-                    full_name: (document.getElementById('s-name')?.value || "").trim() || "Candidate",
+                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || prof.reg || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
+                    full_name: (document.getElementById('s-name')?.value || "").trim() || prof.name || "Candidate",
                     password: "password",
-                    dob: document.getElementById('s-dob')?.value || "",
-                    location: document.getElementById('s-loc')?.value || "",
+                    dob: document.getElementById('s-dob')?.value || prof.dob || "",
+                    location: document.getElementById('s-loc')?.value || prof.loc || "",
                     examTitle: activeCbtExam ? activeCbtExam.title : "JFT-Basic CBT Exam",
                     total_questions: cbtQuestions.length,
                     totalScore: scaled,
@@ -5267,7 +5368,22 @@
             }
         }
 
+        function isAdminLoggedIn() {
+            return sessionStorage.getItem('jft_admin_authenticated') === 'true';
+        }
+        function verifyAdminAuthorization() {
+            if(isAdminLoggedIn()) return true;
+            const key = prompt("Admin Key required to delete mock tests:");
+            if(key === "9902") {
+                sessionStorage.setItem('jft_admin_authenticated', 'true');
+                return true;
+            }
+            alert("Unauthorized: Only administrators can delete mock tests.");
+            return false;
+        }
+
         async function deleteCbtExam(examId, title) {
+            if(!verifyAdminAuthorization()) return;
             const decodedTitle = decodeURIComponent(title || examId);
             if(!confirm(`Are you sure you want to delete CBT Exam:\n"${decodedTitle}"?\n\nThis cannot be undone.`)) return;
             
@@ -5451,6 +5567,7 @@
         function openAdmin() {
             const key = prompt("Admin Key:");
             if(key === "9902") {
+                sessionStorage.setItem('jft_admin_authenticated', 'true');
                 document.getElementById('admin-panel').classList.remove('hidden');
                 switchAdminTab('cbt');
             }
@@ -5651,6 +5768,7 @@
         }
 
         function deleteModelExam(idx) {
+            if(!verifyAdminAuthorization()) return;
             if(idx >= 0 && idx < allExams.length) {
                 const item = allExams[idx];
                 const name = item.modelName || item.name || `Model Test #${idx + 1}`;
@@ -5777,7 +5895,9 @@
                 if(el) el.classList.add('hidden');
             });
             document.getElementById('exam-ui').classList.remove('hidden');
-            document.getElementById('user-display').innerText = "CANDIDATE: " + (document.getElementById('s-name')?.value || "Candidate");
+            const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
+            const candName = (document.getElementById('s-name')?.value || prof.name || "Candidate").trim();
+            document.getElementById('user-display').innerText = "CANDIDATE: " + candName;
             
             const pdfFile = document.getElementById('pdf-input')?.files?.[0];
             if(pdfFile) document.getElementById('pdf-view').src = URL.createObjectURL(pdfFile);
@@ -5897,11 +6017,13 @@
             });
 
             grandTotal = Math.max(grandTotal, 1);
-            let scaled = 10;
+            // JFT-Basic scaled score: 0 to 250 points.
+            // If totalCorrect === 0 or no questions answered, scaled is strictly 0.
+            let scaled = 0;
             if(totalCorrect > 0) {
-                scaled = Math.max(10, Math.min(250, Math.round(10 + (userScore / grandTotal) * 240)));
+                scaled = Math.max(1, Math.min(250, Math.round((userScore / grandTotal) * 250)));
             }
-            const isPassed = scaled >= passMarkVal;
+            const isPassed = scaled >= passMarkVal && scaled > 0;
 
             // Render Official JFT Certificate
             renderJftCertificate({
@@ -5935,12 +6057,13 @@
                     }
                 });
 
+                const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
                 const subPayload = {
-                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || ("MOD-" + Math.floor(1000 + Math.random()*9000)),
-                    full_name: (document.getElementById('s-name')?.value || "").trim() || "Candidate",
+                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || prof.reg || ("MOD-" + Math.floor(1000 + Math.random()*9000)),
+                    full_name: (document.getElementById('s-name')?.value || "").trim() || prof.name || "Candidate",
                     password: "password",
-                    dob: document.getElementById('s-dob')?.value || "",
-                    location: document.getElementById('s-loc')?.value || "",
+                    dob: document.getElementById('s-dob')?.value || prof.dob || "",
+                    location: document.getElementById('s-loc')?.value || prof.loc || "",
                     examTitle: document.getElementById('confirm-model-name')?.innerText || "PDF Model Test",
                     total_questions: modelSubmissionQuestions.length,
                     totalScore: scaled,
