@@ -292,57 +292,102 @@ router.delete('/exams/:id', async (req, res) => {
 });
 // Toggle exam active
 router.post('/exams/:id/toggle-active', async (req, res) => {
-    const { id } = req.params;
+    const id = String(req.params.id || '');
+    const reqBody = (req.body && typeof req.body === 'object') ? req.body : {};
+    const reqTitle = String(reqBody.title || '').trim();
+    const explicitState = typeof reqBody.isActive === 'boolean' ? reqBody.isActive : undefined;
     try {
         let fileExams = loadExamsFromFile();
-        const item = fileExams.find(x => x.id === id || x.exam_id === id);
-        let newState = true;
-        let title = '';
-        if (item) {
-            item.isActive = item.isActive === false ? true : false;
-            newState = item.isActive;
-            title = item.title || '';
-            saveExamsToFile(fileExams);
+        let item = fileExams.find(x => x.id === id || x.exam_id === id || (reqTitle && x.title === reqTitle));
+        let title = reqTitle || (item ? item.title : '');
+        let currentState = item ? (item.isActive !== false) : true;
+        // If not in file, check PostgreSQL to find the existing state and title
+        if (!item || !title) {
+            try {
+                const pgRes = await pool.query(`SELECT exam_id, title, exam_data FROM cbt_saved_exams WHERE exam_id = $1 OR title = $1 OR title = $2 LIMIT 1`, [id, reqTitle]);
+                if (pgRes.rows && pgRes.rows.length > 0) {
+                    const r = pgRes.rows[0];
+                    title = title || r.title || '';
+                    const d = r.exam_data || {};
+                    currentState = d.isActive !== false;
+                }
+            }
+            catch (pgErr) { }
         }
-        // 1. Sync to PostgreSQL
+        // If still not found, check Supabase
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://xyxjoaluucliwwvprlvk.supabase.co';
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh';
+        const supabaseTable = process.env.SUPABASE_TABLE || 'JFT Mock Test';
+        let supabaseRow = null;
         try {
-            await pool.query(`UPDATE cbt_saved_exams SET exam_data = jsonb_set(COALESCE(exam_data, '{}'), '{isActive}', $1::jsonb), updated_at = NOW() WHERE exam_id = $2`, [JSON.stringify(newState), id]);
+            const queryParam = title ? `title=eq.${encodeURIComponent(title)}` : `id=eq.${encodeURIComponent(id)}`;
+            const checkRes = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?${queryParam}&select=id,title,data`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            if (checkRes.ok) {
+                const rows = await checkRes.json();
+                if (Array.isArray(rows) && rows.length > 0) {
+                    supabaseRow = rows[0];
+                    title = title || supabaseRow.title || '';
+                    const d = typeof supabaseRow.data === 'string' ? JSON.parse(supabaseRow.data) : (supabaseRow.data || {});
+                    currentState = d.isActive !== false;
+                }
+            }
+        }
+        catch (sbErr) { }
+        // Determine the new toggled state
+        const newState = explicitState !== undefined ? explicitState : !currentState;
+        // 1. Update fileExams
+        if (item) {
+            item.isActive = newState;
+        }
+        else if (title) {
+            fileExams.push({ id, title, isActive: newState });
+        }
+        saveExamsToFile(fileExams);
+        // 2. Sync to PostgreSQL
+        try {
+            await pool.query(`UPDATE cbt_saved_exams SET exam_data = jsonb_set(COALESCE(exam_data, '{}'), '{isActive}', $1::jsonb), updated_at = NOW() WHERE exam_id = $2 OR title = $2 OR title = $3`, [JSON.stringify(newState), id, title]);
         }
         catch (pgErr) {
-            console.warn('PostgreSQL toggle sync skipped:', pgErr.message);
+            console.warn('PostgreSQL toggle sync note:', pgErr.message);
         }
-        // 2. Sync to Supabase
-        if (title) {
+        // 3. Sync to Supabase using Service Role Key
+        if (supabaseRow || title) {
             try {
-                const supabaseUrl = process.env.SUPABASE_URL || 'https://xyxjoaluucliwwvprlvk.supabase.co';
-                const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh';
-                const supabaseTable = process.env.SUPABASE_TABLE || 'JFT Mock Test';
-                const checkRes = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?title=eq.${encodeURIComponent(title)}&select=id,data`, {
-                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                });
-                if (checkRes.ok) {
-                    const rows = await checkRes.json();
-                    if (Array.isArray(rows) && rows.length > 0) {
-                        const existingData = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : (rows[0].data || {});
-                        existingData.isActive = newState;
-                        await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?id=eq.${rows[0].id}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'apikey': supabaseKey,
-                                'Authorization': `Bearer ${supabaseKey}`,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=minimal'
-                            },
-                            body: JSON.stringify({ data: existingData })
-                        });
+                let targetId = supabaseRow ? supabaseRow.id : null;
+                let existingData = supabaseRow ? (typeof supabaseRow.data === 'string' ? JSON.parse(supabaseRow.data) : (supabaseRow.data || {})) : {};
+                if (!targetId && title) {
+                    const checkRes = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?title=eq.${encodeURIComponent(title)}&select=id,data`, {
+                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                    });
+                    if (checkRes.ok) {
+                        const rows = await checkRes.json();
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            targetId = rows[0].id;
+                            existingData = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : (rows[0].data || {});
+                        }
                     }
+                }
+                if (targetId) {
+                    existingData.isActive = newState;
+                    await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?id=eq.${targetId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({ data: existingData })
+                    });
                 }
             }
             catch (sbErr) {
                 console.warn('Supabase toggle sync note:', sbErr.message);
             }
         }
-        res.json({ success: true, id, isActive: newState });
+        res.json({ success: true, id, title, isActive: newState });
     }
     catch (err) {
         res.status(500).json({ error: 'Failed to toggle exam', detail: err.message });

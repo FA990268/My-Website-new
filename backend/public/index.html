@@ -1806,6 +1806,23 @@
             });
         }
 
+        // --- PERSISTENT EXAM VISIBILITY ENGINE ---
+        function getHiddenExamList() {
+            try { return JSON.parse(localStorage.getItem('jft_hidden_exam_ids') || '[]'); } catch(e) { return []; }
+        }
+        function setExamHiddenState(idOrTitle, isHidden) {
+            if(!idOrTitle) return;
+            const key = String(idOrTitle).trim();
+            if(!key) return;
+            let list = getHiddenExamList();
+            if(isHidden) {
+                if(!list.includes(key)) list.push(key);
+            } else {
+                list = list.filter(x => x !== key);
+            }
+            try { localStorage.setItem('jft_hidden_exam_ids', JSON.stringify(list)); } catch(e) {}
+        }
+
         let allCbtExams = [];
         let activeCbtExam = null;
         let cbtQuestions = [];
@@ -1850,6 +1867,13 @@
                 const deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
                 if(savedExams) {
                     allExams = JSON.parse(savedExams).filter(ex => !deletedModels.includes(ex.modelName || ex.name));
+                    const hiddenList = getHiddenExamList();
+                    allExams.forEach(ex => {
+                        const mTitle = ex.modelName || ex.title || ex.name;
+                        if ((ex.id && hiddenList.includes(String(ex.id))) || (mTitle && hiddenList.includes(mTitle))) {
+                            ex.isActive = false;
+                        }
+                    });
                 }
             } catch(e) {}
 
@@ -2033,6 +2057,16 @@
                 } catch(e) {}
             }
 
+            // Apply persistent hidden list
+            try {
+                const hiddenList = getHiddenExamList();
+                allCbtExams.forEach(e => {
+                    if(hiddenList.includes(String(e.id)) || (e.title && hiddenList.includes(e.title))) {
+                        e.isActive = false;
+                    }
+                });
+            } catch(hErr) {}
+
             try { renderStudentCbtList(); } catch(e) {}
             try { renderAdminCbtList(); } catch(e) {}
             try { renderHomeExams(); } catch(e) {}
@@ -2126,6 +2160,15 @@
                         return;
                     }
 
+                    // Check persistent hidden list
+                    const hiddenList = getHiddenExamList();
+                    const isExplicitlyHidden = hiddenList.includes(rowId) || hiddenList.includes(title);
+                    if(parsed.isActive === false) {
+                        setExamHiddenState(rowId, true);
+                        setExamHiddenState(title, true);
+                    }
+                    const finalActive = isExplicitlyHidden ? false : (parsed.isActive !== false);
+
                     // 1. If row contains structured questions (Prometric CBT style)
                     const qs = parsed.questions || (Array.isArray(parsed.examData) ? parsed.examData : null);
                     if(qs && qs.length > 0 && (parsed.duration || parsed.passMark || qs[0]?.section || qs[0]?.options)) {
@@ -2152,7 +2195,7 @@
                             duration: parsed.duration || 60,
                             passMark: parsed.passMark || 200,
                             questions: qs,
-                            isActive: parsed.isActive !== false,
+                            isActive: finalActive,
                             source: 'supabase'
                         };
                         if(cbtIdx !== -1) {
@@ -2173,7 +2216,7 @@
                         passMark: parsed.passMark || 200,
                         duration: parsed.duration || 60,
                         examData: qs || parsed.items || [],
-                        isActive: parsed.isActive !== false,
+                        isActive: finalActive,
                         source: 'supabase'
                     };
                     if(exIdx !== -1) {
@@ -3275,7 +3318,13 @@
                 renderActiveGroupsChips();
                 renderAdminSliderManager();
             }
-            if(tab === 'model') renderGroupOptions();
+            if(tab === 'model') {
+                renderGroupOptions();
+                renderAdminModelList();
+            }
+            if(tab === 'cbt') {
+                renderAdminCbtList();
+            }
         }
 
         async function loadDemoUnifiedCbtExam() {
@@ -5573,32 +5622,100 @@
             }).join('');
         }
 
-        async function toggleCbtExamActive(examId) {
-            try {
-                const res = await fetch(`${API_BASE}/api/exams/${encodeURIComponent(examId)}/toggle-active`, {
-                    method: 'POST'
-                });
-                if(!res.ok) throw new Error("Failed to toggle exam status on server");
-                const data = await res.json();
-                const ex = allCbtExams.find(x => x.id === examId);
-                if(ex) ex.isActive = data.isActive;
-                renderStudentCbtList();
-                renderAdminCbtList();
-                renderHomeExams();
-                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-            } catch(e) {
-                const ex = allCbtExams.find(x => x.id === examId);
-                if(ex) {
-                    ex.isActive = (ex.isActive === false) ? true : false;
-                    localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams));
-                    renderStudentCbtList();
-                    renderAdminCbtList();
-                    renderHomeExams();
-                    if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-                    // Fallback: sync directly to Supabase if backend is unavailable
-                    try { await saveExamToSupabase(ex); } catch(sbErr) {}
+        async function syncExamVisibilityToggle(target, type) {
+            let targetId = '';
+            let targetTitle = '';
+            let newState;
+            let matchedEx = null;
+
+            if (type === 'model') {
+                const idx = typeof target === 'number' ? target : allExams.findIndex(x => x.id === target || x.title === target || x.modelName === target);
+                if (idx >= 0 && idx < allExams.length) {
+                    matchedEx = allExams[idx];
+                    targetId = String(matchedEx.id || '');
+                    targetTitle = String(matchedEx.modelName || matchedEx.title || '').trim();
+                    const currentState = (matchedEx.isActive !== false);
+                    newState = !currentState;
+                }
+            } else {
+                // type === 'cbt'
+                const cbtEx = allCbtExams.find(x => String(x.id) === String(target) || (x.title && x.title === String(target)));
+                if (cbtEx) {
+                    matchedEx = cbtEx;
+                    targetId = String(cbtEx.id || target || '');
+                    targetTitle = String(cbtEx.title || '').trim();
+                    const currentState = (cbtEx.isActive !== false);
+                    newState = !currentState;
+                } else {
+                    targetId = String(target || '');
+                    newState = false;
                 }
             }
+
+            if (typeof newState !== 'boolean') return;
+
+            // 1. Cross-update allCbtExams array
+            if (Array.isArray(allCbtExams)) {
+                allCbtExams.forEach(x => {
+                    const matchById = targetId && (String(x.id) === targetId || String(x.exam_id) === targetId);
+                    const matchByTitle = targetTitle && (x.title === targetTitle || (x.data && x.data.title === targetTitle));
+                    if (matchById || matchByTitle) {
+                        x.isActive = newState;
+                    }
+                });
+                try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+            }
+
+            // 2. Cross-update allExams array
+            if (Array.isArray(allExams)) {
+                allExams.forEach(x => {
+                    const matchById = targetId && (String(x.id) === targetId || String(x.exam_id) === targetId);
+                    const matchByTitle = targetTitle && (x.title === targetTitle || x.modelName === targetTitle || (x.data && (x.data.title === targetTitle || x.data.modelName === targetTitle)));
+                    if (matchById || matchByTitle) {
+                        x.isActive = newState;
+                    }
+                });
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+            }
+
+            // 3. Update persistent hidden list in localStorage
+            if (targetId) setExamHiddenState(targetId, !newState);
+            if (targetTitle) setExamHiddenState(targetTitle, !newState);
+
+            // 4. Update UI across ALL views immediately
+            if (typeof renderStudentCbtList === 'function') renderStudentCbtList();
+            if (typeof renderAdminCbtList === 'function') renderAdminCbtList();
+            if (typeof renderAdminModelList === 'function') renderAdminModelList();
+            if (typeof renderHomeExams === 'function') renderHomeExams();
+            if (typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+
+            // 5. Send update to Backend (persists in PG and Supabase with Service Role Key)
+            const paramKey = encodeURIComponent(targetId || targetTitle);
+            try {
+                await fetch(`${API_BASE}/api/exams/${paramKey}/toggle-active`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: targetId,
+                        title: targetTitle,
+                        isActive: newState
+                    })
+                });
+            } catch(beErr) {
+                console.warn('Backend toggle-active sync error:', beErr);
+            }
+
+            // 6. Direct Supabase save fallback
+            try {
+                const payload = matchedEx ? { ...matchedEx, isActive: newState } : { id: targetId, title: targetTitle, isActive: newState };
+                await saveExamToSupabase(payload);
+            } catch(sbErr) {
+                console.warn('Direct Supabase sync fallback warning:', sbErr);
+            }
+        }
+
+        async function toggleCbtExamActive(examId) {
+            await syncExamVisibilityToggle(examId, 'cbt');
         }
 
         function isAdminLoggedIn() {
@@ -5628,12 +5745,20 @@
                 localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedIds));
             } catch(e) {}
 
-            // 2. Remove locally so UI is immediately updated
+            // 2. Remove locally so UI is immediately updated across both lists
             allCbtExams = allCbtExams.filter(x => x.id !== examId && x.title !== decodedTitle);
             try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+            allExams = allExams.filter(x => x.id !== examId && x.modelName !== decodedTitle && x.title !== decodedTitle);
+            try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+            try {
+                let deletedModels = JSON.parse(localStorage.getItem('jft_deleted_model_names') || '[]');
+                if(!deletedModels.includes(decodedTitle)) deletedModels.push(decodedTitle);
+                localStorage.setItem('jft_deleted_model_names', JSON.stringify(deletedModels));
+            } catch(e) {}
             
             renderStudentCbtList();
             renderAdminCbtList();
+            renderAdminModelList();
             renderHomeExams();
             if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
 
@@ -5991,19 +6116,7 @@
         }
 
         async function toggleModelExamActive(idx) {
-            if(idx >= 0 && idx < allExams.length) {
-                allExams[idx].isActive = (allExams[idx].isActive === false) ? true : false;
-                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
-                renderAdminModelList();
-                renderHomeExams();
-                if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
-                // Sync isActive to Supabase so other devices respect visibility
-                try {
-                    await saveExamToSupabase(allExams[idx]);
-                } catch(e) {
-                    console.warn('Model exam toggle Supabase sync skipped:', e);
-                }
-            }
+            await syncExamVisibilityToggle(idx, 'model');
         }
 
         function deleteModelExam(idx) {
@@ -6022,6 +6135,16 @@
 
                 allExams.splice(idx, 1);
                 try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+                allCbtExams = allCbtExams.filter(x => x.id !== item.id && x.title !== name);
+                try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+                try {
+                    let deletedCbt = JSON.parse(localStorage.getItem('jft_deleted_cbt_ids') || '[]');
+                    if(item.id && !deletedCbt.includes(item.id)) deletedCbt.push(item.id);
+                    if(!deletedCbt.includes(name)) deletedCbt.push(name);
+                    localStorage.setItem('jft_deleted_cbt_ids', JSON.stringify(deletedCbt));
+                } catch(e) {}
+                renderStudentCbtList();
+                renderAdminCbtList();
                 renderAdminModelList();
                 renderHomeExams();
                 if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
