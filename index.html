@@ -1707,6 +1707,105 @@
             return `assets/${fileName}`;
         }
 
+        // --- HIGH-PERFORMANCE EXAM IMAGE PRE-CACHING & LAZY LOADING ENGINE ---
+        const examImageWorkingUrlCache = new Map();
+        const examImageDomCache = new Map();
+
+        function getCandidateImageUrls(original) {
+            if(!original || typeof original !== 'string') return [];
+            let url = original.trim().replace(/\\/g, '/');
+            if(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+                return [url];
+            }
+            const fn = (url.split(/[\\/]/).pop() || '').trim();
+            if(!fn) return [url];
+
+            const getFolder = (name) => {
+                if(name.startsWith('ZZ_')) return 'ZZ_Illustrations';
+                if(name.startsWith('Z_')) return 'Z_Illustrations';
+                if(name.startsWith('Y_')) return 'Y_Illustrations';
+                if(name.startsWith('X_')) return 'X_Illustrations';
+                return '';
+            };
+            const folder = getFolder(fn);
+            const cdn = 'https://my-website-new-fhe2.vercel.app';
+
+            const list = [];
+            // Direct resolved path
+            if(folder) list.push(`assets/${folder}/${fn}`);
+            else list.push(`assets/${fn}`);
+
+            // Lowercase folder variant (e.g. assets/x_illustrations/...)
+            if(folder) list.push(`assets/${folder.toLowerCase()}/${fn}`);
+
+            // Production CDN path
+            if(folder) list.push(`${cdn}/assets/${folder}/${fn}`);
+            else list.push(`${cdn}/assets/${fn}`);
+
+            // backend/public path
+            if(folder) list.push(`backend/public/assets/${folder}/${fn}`);
+
+            // Original relative URL as-is
+            if(!list.includes(url)) list.push(url);
+
+            return list;
+        }
+
+        function preWarmSingleImage(rawUrl, isHighPriority = false) {
+            if(!rawUrl || typeof rawUrl !== 'string') return;
+            const cleanUrl = rawUrl.trim();
+            if(!cleanUrl || examImageWorkingUrlCache.has(cleanUrl)) return;
+
+            const candidates = getCandidateImageUrls(cleanUrl);
+            let attempt = 0;
+
+            function tryNext() {
+                if(attempt >= candidates.length) return;
+                const candidate = candidates[attempt];
+                const img = new Image();
+                if(isHighPriority && 'fetchPriority' in img) {
+                    img.fetchPriority = 'high';
+                }
+                img.decoding = 'async';
+                img.onload = () => {
+                    examImageWorkingUrlCache.set(cleanUrl, candidate);
+                    examImageDomCache.set(candidate, img);
+                };
+                img.onerror = () => {
+                    attempt++;
+                    tryNext();
+                };
+                img.src = candidate;
+            }
+            tryNext();
+        }
+
+        function preCacheExamImages(questions) {
+            if(!Array.isArray(questions) || questions.length === 0) return;
+            const imagesToCache = [];
+            questions.forEach((q, idx) => {
+                const imgPath = q.image || (q.options && q.options.find(o => typeof o === 'string' && o.match(/\.(png|jpg|jpeg|webp|gif)/i))) || '';
+                if(imgPath && typeof imgPath === 'string' && imgPath.trim()) {
+                    imagesToCache.push({ idx, raw: imgPath.trim() });
+                }
+            });
+            if(imagesToCache.length === 0) return;
+
+            // 1. Immediately preload the first 3 images with high priority
+            const immediate = imagesToCache.slice(0, 3);
+            immediate.forEach(item => preWarmSingleImage(item.raw, true));
+
+            // 2. Pre-cache remaining images progressively so network and audio are never choked
+            const remaining = imagesToCache.slice(3);
+            let delay = 100;
+            remaining.forEach(item => {
+                setTimeout(() => {
+                    preWarmSingleImage(item.raw, false);
+                }, delay);
+                delay += 80;
+            });
+        }
+
         let allCbtExams = [];
         let activeCbtExam = null;
         let cbtQuestions = [];
@@ -1943,6 +2042,8 @@
             if(allCbtExams.length > 0 && !pendingAdminCbtJson) {
                 try {
                     previewUnifiedCbtStudio(allCbtExams[0]);
+                    const qs = allCbtExams[0].questions || allCbtExams[0].data?.questions || [];
+                    if(qs.length > 0) preCacheExamImages(qs);
                 } catch(e) {}
             }
             // Ensure synth button reflects loaded state
@@ -3300,15 +3401,8 @@
 
             parsedScripts = extractedScripts;
 
-            // Detect unique speakers
-            speakerVoiceMap = {};
-            parsedScripts.forEach(s => {
-                s.dialogues.forEach(t => {
-                    if(!speakerVoiceMap[t.speaker]) {
-                        speakerVoiceMap[t.speaker] = detectSpeakerVoice(t.speaker);
-                    }
-                });
-            });
+            // Detect distinct speakers with dialogue-aware complementary pairing
+            speakerVoiceMap = buildDistinctSpeakerVoiceMap(parsedScripts);
 
             renderCbtOverviewBadges(qs.length, parsedScripts.length, Object.keys(speakerVoiceMap).length);
             renderSpeakerMappingChips();
@@ -3401,19 +3495,128 @@
             if(bS) bS.innerText = `${totalSpeakers} Speakers Detected`;
         }
 
-        function detectSpeakerVoice(name) {
+        function detectSpeakerVoice(name, existingSpeakersInDialogue = []) {
             const s = (name || "").toLowerCase().trim();
-            const isFemale = ["女", "おんな", "female", "woman", "mama", "店員", "母", "姉", "妹", "妻", "彼女", "girl", "daughter", "娘", "yuna", "mia", "女性", "aoi", "nanami", "speaker 1", "speaker a", "person a", "話者1", "話者a"].some(k => s.includes(k)) || s === "a" || s === "1";
-            const isMale = ["男", "おとこ", "male", "man", "papa", "父", "兄", "弟", "夫", "彼氏", "boy", "son", "息子", "男性", "keita", "speaker 2", "speaker b", "person b", "話者2", "話者b"].some(k => s.includes(k)) || s === "b" || s === "2";
+
+            // 1. Child roles
+            if(["男の子", "boy", "son", "息子", "子供 (男)", "子供（男）"].some(k => s.includes(k))) {
+                return { role_category: "male", role_label: "👦 Child Boy (Ren • 蓮)", voice_id: "ja-JP-RenChildNeural" };
+            }
+            if(["女の子", "girl", "daughter", "娘", "子供 (女)", "子供（女）"].some(k => s.includes(k))) {
+                return { role_category: "female", role_label: "👧 Child Girl (Yuna • 由奈)", voice_id: "ja-JP-YunaChildNeural" };
+            }
+
+            // 2. Compound gender qualifiers with role (e.g. 男の店員, 男の人, 女の店員, 女の人, 店員(男), 客(女))
+            if(s.includes("男の") || s.includes("(男)") || s.includes("（男）") || s.includes("(male)") || s.includes("男性")) {
+                return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
+            }
+            if(s.includes("女の") || s.includes("(女)") || s.includes("（女）") || s.includes("(female)") || s.includes("女性")) {
+                return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
+            }
+
+            // 3. Explicit keywords
+            const isFemale = [
+                "女", "おんな", "female", "woman", "mama", "母", "お母さん", "姉", "妹", "妻", "彼女",
+                "aoi", "nanami", "アナウンス", "受付", "案内", "看護師", "おばあさん", "祖母", "おば",
+                "speaker 1", "speaker a", "person a", "話者1", "話者a"
+            ].some(k => s.includes(k)) || s === "a" || s === "1";
+
+            const isMale = [
+                "男", "おとこ", "male", "man", "papa", "父", "お父さん", "兄", "弟", "夫", "彼氏",
+                "keita", "daichi", "駅員", "車掌", "運転手", "おじいさん", "祖父", "おじ",
+                "speaker 2", "speaker b", "person b", "話者2", "話者b"
+            ].some(k => s.includes(k)) || s === "b" || s === "2";
 
             if(isFemale && !isMale) {
                 return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
             }
-            if(isMale) {
+            if(isMale && !isFemale) {
                 return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
             }
-            // Default fallback: Keita for male/narrator
+
+            // 4. Conventional situational roles
+            if(s.includes("店員")) {
+                return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
+            }
+            if(s.includes("客")) {
+                return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
+            }
+
+            // 5. Contextual dialogue pairing: if paired with an already known speaker in the same script
+            if(Array.isArray(existingSpeakersInDialogue) && existingSpeakersInDialogue.length > 0) {
+                const other = existingSpeakersInDialogue.find(sp => sp && sp !== name);
+                if(other) {
+                    const otherConf = detectSpeakerVoice(other, []);
+                    if(otherConf.role_category === 'female') {
+                        return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
+                    } else if(otherConf.role_category === 'male') {
+                        return { role_category: "female", role_label: "👩 Female (Aoi • 葵)", voice_id: "ja-JP-AoiNeural" };
+                    }
+                }
+            }
+
+            // Male speakers & narrator default -> Keita
             return { role_category: "male", role_label: "👨 Male (Keita • 圭太)", voice_id: "ja-JP-KeitaNeural" };
+        }
+
+        function buildDistinctSpeakerVoiceMap(scripts) {
+            const map = {};
+            if(!Array.isArray(scripts)) return map;
+
+            scripts.forEach(s => {
+                const turns = Array.isArray(s.dialogues) ? s.dialogues : (Array.isArray(s.dialog) ? s.dialog : []);
+                const uniqueInScript = [];
+                turns.forEach(t => {
+                    const spk = String(t.speaker || t.role || "").trim();
+                    if(spk && !uniqueInScript.includes(spk)) uniqueInScript.push(spk);
+                });
+
+                if(uniqueInScript.length === 2) {
+                    const [spk1, spk2] = uniqueInScript;
+                    if(!map[spk1] && !map[spk2]) {
+                        const conf1 = detectSpeakerVoice(spk1, [spk2]);
+                        map[spk1] = conf1;
+                        const conf2 = detectSpeakerVoice(spk2, [spk1]);
+                        if(conf2.voice_id === conf1.voice_id) {
+                            map[spk2] = conf2.role_category === 'female'
+                                ? { role_category: "female", role_label: "👩 Female (Nanami • 七海)", voice_id: "ja-JP-NanamiNeural" }
+                                : { role_category: "male", role_label: "👨 Male (Keita Deep • 低音男性)", voice_id: "ja-JP-DaichiNeural" };
+                        } else {
+                            map[spk2] = conf2;
+                        }
+                    } else if(map[spk1] && !map[spk2]) {
+                        const conf1 = map[spk1];
+                        const conf2 = detectSpeakerVoice(spk2, [spk1]);
+                        if(conf2.voice_id === conf1.voice_id) {
+                            map[spk2] = conf1.role_category === 'female'
+                                ? { role_category: "female", role_label: "👩 Female (Nanami • 七海)", voice_id: "ja-JP-NanamiNeural" }
+                                : { role_category: "male", role_label: "👨 Male (Keita Deep • 低音男性)", voice_id: "ja-JP-DaichiNeural" };
+                        } else {
+                            map[spk2] = conf2;
+                        }
+                    } else if(!map[spk1] && map[spk2]) {
+                        const conf2 = map[spk2];
+                        const conf1 = detectSpeakerVoice(spk1, [spk2]);
+                        if(conf1.voice_id === conf2.voice_id) {
+                            map[spk1] = conf2.role_category === 'female'
+                                ? { role_category: "female", role_label: "👩 Female (Nanami • 七海)", voice_id: "ja-JP-NanamiNeural" }
+                                : { role_category: "male", role_label: "👨 Male (Keita Deep • 低音男性)", voice_id: "ja-JP-DaichiNeural" };
+                        } else {
+                            map[spk1] = conf1;
+                        }
+                    } else if(map[spk1] && map[spk2] && map[spk1].voice_id === map[spk2].voice_id) {
+                        map[spk2] = map[spk1].role_category === 'female'
+                            ? { role_category: "female", role_label: "👩 Female (Nanami • 七海)", voice_id: "ja-JP-NanamiNeural" }
+                            : { role_category: "male", role_label: "👨 Male (Keita Deep • 低音男性)", voice_id: "ja-JP-DaichiNeural" };
+                    }
+                } else {
+                    uniqueInScript.forEach(spk => {
+                        if(!map[spk]) map[spk] = detectSpeakerVoice(spk, uniqueInScript);
+                    });
+                }
+            });
+
+            return map;
         }
 
         function renderSpeakerMappingChips() {
@@ -3432,7 +3635,7 @@
                 const conf = speakerVoiceMap[spk];
                 const card = document.createElement('div');
                 card.className = "bg-white/5 border border-white/10 p-3.5 rounded-xl flex flex-col justify-between space-y-2.5";
-                const roleIcon = conf.role_category === 'female' ? '👩' : '👨';
+                const roleIcon = conf.role_category === 'female' ? '👩' : (conf.voice_id.includes('Child') ? '🧒' : '👨');
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <span class="font-bold text-white text-xs truncate mr-2">${roleIcon} ${spk}</span>
@@ -3442,7 +3645,9 @@
                         <option value="ja-JP-KeitaNeural" ${conf.voice_id==='ja-JP-KeitaNeural'?'selected':''}>👨 Keita (Male • 成人男性)</option>
                         <option value="ja-JP-AoiNeural" ${conf.voice_id==='ja-JP-AoiNeural'?'selected':''}>👩 Aoi (Female • 成人女性)</option>
                         <option value="ja-JP-DaichiNeural" ${conf.voice_id==='ja-JP-DaichiNeural'?'selected':''}>👨 Keita Deep (Male • 低音男性)</option>
-                        <option value="ja-JP-NanamiNeural" ${conf.voice_id==='ja-JP-NanamiNeural'?'selected':''}>👩 Aoi Standard (Female • 標準女性)</option>
+                        <option value="ja-JP-NanamiNeural" ${conf.voice_id==='ja-JP-NanamiNeural'?'selected':''}>👩 Nanami (Female • 標準女性)</option>
+                        <option value="ja-JP-RenChildNeural" ${conf.voice_id==='ja-JP-RenChildNeural'?'selected':''}>👦 Ren (Child Boy • 男の子)</option>
+                        <option value="ja-JP-YunaChildNeural" ${conf.voice_id==='ja-JP-YunaChildNeural'?'selected':''}>👧 Yuna (Child Girl • 女の子)</option>
                     </select>
                     <button onclick="testSpeakerVoice('${spk}')" class="bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 border border-cyan-400/30 text-[11px] font-bold py-1.5 px-3 rounded-lg transition flex items-center justify-center gap-1.5">
                         <span>▶ Test Voice</span>
@@ -3808,6 +4013,9 @@
 
             activeCbtExam = found;
             const qs = found.questions || found.data?.questions || found.exam_data?.questions || found.examData || [];
+            // Pre-cache exam illustration images during confirmation screen so questions render with 0 delay
+            preCacheExamImages(qs);
+
             const duration = found.duration || found.data?.duration || 60;
             const passMark = found.passMark || found.data?.passMark || 200;
             const title = found.title || found.data?.title || "JFT-Basic Official Prometric CBT Exam";
@@ -3876,6 +4084,7 @@
             }
 
             cbtQuestions = activeCbtExam.questions || activeCbtExam.data?.questions || activeCbtExam.exam_data?.questions || activeCbtExam.examData || [];
+            preCacheExamImages(cbtQuestions);
             cbtCurrentIdx = 0;
             cbtAnswers = {};
             cbtFlags = {};
@@ -3910,6 +4119,7 @@
                 return;
             }
             config = found.examData || found.items || [];
+            preCacheExamImages(config);
             time = (found.duration || 60) * 60;
             const nameEl = document.getElementById('confirm-model-name');
             if(nameEl) nameEl.innerText = found.modelName || found.name || `Model Test (${group})`;
@@ -4212,8 +4422,10 @@
                 const line = dialogues[lineIndex];
                 const speaker = line.speaker || line.role || `Speaker ${lineIndex + 1}`;
                 const text = line.text || line.content || "";
-                const roleCategory = detectSpeakerVoice(speaker).role_category;
-                const voiceId = roleCategory === 'female' ? 'ja-JP-AoiNeural' : 'ja-JP-KeitaNeural';
+                const uniqueSpeakersInThisQ = Array.from(new Set(dialogues.map(d => String(d.speaker || d.role || '').trim()).filter(Boolean)));
+                const spkConf = speakerVoiceMap[speaker] || detectSpeakerVoice(speaker, uniqueSpeakersInThisQ);
+                const roleCategory = spkConf.role_category;
+                const voiceId = line.voice || line.voice_id || spkConf.voice_id;
 
                 // Configure listening section so dialogue scripts are strictly hidden during audio playback
                 if(indicator) {
@@ -4351,47 +4563,41 @@
                 passageBox.classList.add('hidden');
             }
 
-            // Image
+            // Image with Zero-Delay Pre-Cached Resolver & Instant Memory Serving
             const imgBox = document.getElementById('cbt-image-box');
             const imgEl = document.getElementById('cbt-q-image');
             if(q.image && q.image.trim() !== "") {
-                const resolved = resolveExamImageUrl(q.image);
-                imgEl.setAttribute('data-original', q.image);
-                imgEl.setAttribute('data-attempt', '0');
-                imgEl.onerror = function() {
-                    const cur = parseInt(imgEl.getAttribute('data-attempt') || '0', 10);
-                    const original = imgEl.getAttribute('data-original') || '';
-                    const fn = (original.split(/[\\/]/).pop() || '').trim();
-                    if(!fn) return;
+                const rawImg = q.image.trim();
+                imgEl.setAttribute('data-original', rawImg);
+                imgEl.decoding = 'async';
+                imgEl.loading = 'eager';
 
-                    const getFolder = (name) => {
-                        if(name.startsWith('ZZ_')) return 'ZZ_Illustrations';
-                        if(name.startsWith('Z_')) return 'Z_Illustrations';
-                        if(name.startsWith('Y_')) return 'Y_Illustrations';
-                        if(name.startsWith('X_')) return 'X_Illustrations';
-                        return '';
+                const cachedWorking = examImageWorkingUrlCache.get(rawImg);
+                if(cachedWorking) {
+                    imgEl.src = cachedWorking;
+                } else {
+                    const candidates = getCandidateImageUrls(rawImg);
+                    let attempt = 0;
+                    imgEl.onerror = function() {
+                        attempt++;
+                        if(attempt < candidates.length) {
+                            imgEl.src = candidates[attempt];
+                        } else {
+                            imgEl.onerror = null;
+                        }
                     };
-                    const folder = getFolder(fn);
-
-                    if(cur === 0) {
-                        imgEl.setAttribute('data-attempt', '1');
-                        imgEl.src = folder ? `assets/${folder}/${fn}` : `assets/${fn}`;
-                    } else if(cur === 1) {
-                        imgEl.setAttribute('data-attempt', '2');
-                        imgEl.src = folder ? `backend/public/assets/${folder}/${fn}` : `backend/public/assets/${fn}`;
-                    } else if(cur === 2) {
-                        imgEl.setAttribute('data-attempt', '3');
-                        imgEl.src = folder ? `Jft Test/assets/${folder}/${fn}` : `Jft Test/assets/${fn}`;
-                    } else if(cur === 3) {
-                        imgEl.setAttribute('data-attempt', '4');
-                        const cdn = 'https://my-website-new-fhe2.vercel.app';
-                        imgEl.src = folder ? `${cdn}/assets/${folder}/${fn}` : `${cdn}/assets/${fn}`;
-                    } else {
-                        imgEl.onerror = null;
-                    }
-                };
-                imgEl.src = resolved;
+                    imgEl.onload = function() {
+                        examImageWorkingUrlCache.set(rawImg, imgEl.src);
+                    };
+                    imgEl.src = candidates[0];
+                }
                 imgBox.classList.remove('hidden');
+
+                // Proactively pre-warm next question's image
+                if(cbtCurrentIdx + 1 < cbtQuestions.length) {
+                    const nextQ = cbtQuestions[cbtCurrentIdx + 1];
+                    if(nextQ && nextQ.image) preWarmSingleImage(nextQ.image.trim(), true);
+                }
             } else {
                 imgBox.classList.add('hidden');
             }
@@ -4477,21 +4683,27 @@
                     audioPlayer.src = "";
                     if(speechBtn) speechBtn.classList.remove('hidden');
 
-                    // Pre-fetch neural turn audio in the background for SQL-inserted or unsynthesized dialogues
-                    if(Array.isArray(dialoguesList)) {
-                        dialoguesList.forEach(line => {
-                            if(!line.audio_base64 && !line.turn_audio_url) {
-                                const spk = line.speaker || line.role || "";
-                                const spkConf = detectSpeakerVoice(spk);
-                                const txt = line.text || line.content || "";
-                                if(txt) {
-                                    fetchNeuralTtsAudio(txt, spkConf.voice_id, spk).then(b64 => {
-                                        if(b64) line.audio_base64 = b64;
-                                    }).catch(() => {});
+                    // Defer background neural turn pre-fetch slightly so question image gets top network priority
+                    setTimeout(() => {
+                        if(Array.isArray(dialoguesList) && !isCbtDialoguePlaying) {
+                            const uniqueSpeakers = Array.from(new Set(dialoguesList.map(d => String(d.speaker || d.role || '').trim()).filter(Boolean)));
+                            dialoguesList.forEach((line, lIdx) => {
+                                if(!line.audio_base64 && !line.turn_audio_url) {
+                                    const spk = line.speaker || line.role || "";
+                                    const spkConf = speakerVoiceMap[spk] || detectSpeakerVoice(spk, uniqueSpeakers);
+                                    const txt = line.text || line.content || "";
+                                    if(txt) {
+                                        // Stagger turn requests by 200ms to avoid saturated HTTP queue
+                                        setTimeout(() => {
+                                            fetchNeuralTtsAudio(txt, line.voice || line.voice_id || spkConf.voice_id, spk).then(b64 => {
+                                                if(b64) line.audio_base64 = b64;
+                                            }).catch(() => {});
+                                        }, lIdx * 200);
+                                    }
                                 }
-                            }
-                        });
-                    }
+                            });
+                        }
+                    }, 180);
                 } else {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";

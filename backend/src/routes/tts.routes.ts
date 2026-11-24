@@ -150,14 +150,68 @@ export const CUSTOM_VOICES: Record<string, any> = {
   }
 };
 
-export function parseSpeakerRole(speakerName: string) {
+export function parseSpeakerRole(speakerName: string, existingSpeakersInScript: string[] = []) {
   const s = (speakerName || "").toLowerCase().trim();
-  // Female speakers -> Aoi
-  if (["女", "おんな", "female", "woman", "mama", "店員", "aoi", "nanami", "母", "姉", "妹", "妻", "彼女", "girl", "daughter", "娘", "yuna", "mia", "女性", "f"].some(k => s.includes(k))) {
-    return { role_category: "female", role_label: "👩 Female (Aoi - 葵)", voice_id: "ja-JP-AoiNeural" };
+
+  // 1. Child roles
+  if (["男の子", "boy", "son", "息子", "子供 (男)", "子供（男）"].some(k => s.includes(k))) {
+    return { role_category: "male", role_label: "👦 Child Boy (Ren - 男の子)", voice_id: "ja-JP-RenChildNeural" };
   }
-  // Male speakers & narrator -> Keita
-  return { role_category: "male", role_label: "👨 Male (Keita - 圭太)", voice_id: "ja-JP-KeitaNeural" };
+  if (["女の子", "girl", "daughter", "娘", "子供 (女)", "子供（女）"].some(k => s.includes(k))) {
+    return { role_category: "female", role_label: "👧 Child Girl (Yuna - 女の子)", voice_id: "ja-JP-YunaChildNeural" };
+  }
+
+  // 2. Compound gender qualifiers with role (e.g. 男の店員, 男の人, 女の店員, 女の人, 店員(男), 客(女))
+  if (s.includes("男の") || s.includes("(男)") || s.includes("（男）") || s.includes("(male)") || s.includes("男性")) {
+    return { role_category: "male", role_label: "👨 Male (Keita - 成人男性)", voice_id: "ja-JP-KeitaNeural" };
+  }
+  if (s.includes("女の") || s.includes("(女)") || s.includes("（女）") || s.includes("(female)") || s.includes("女性")) {
+    return { role_category: "female", role_label: "👩 Female (Aoi - 成人女性)", voice_id: "ja-JP-AoiNeural" };
+  }
+
+  // 3. Explicit keywords
+  const isFemale = [
+    "女", "おんな", "female", "woman", "mama", "母", "お母さん", "姉", "妹", "妻", "彼女",
+    "aoi", "nanami", "アナウンス", "受付", "案内", "看護師", "おばあさん", "祖母", "おば",
+    "speaker 1", "speaker a", "person a", "話者1", "話者a"
+  ].some(k => s.includes(k)) || s === "a" || s === "1";
+
+  const isMale = [
+    "男", "おとこ", "male", "man", "papa", "父", "お父さん", "兄", "弟", "夫", "彼氏",
+    "keita", "daichi", "駅員", "車掌", "運転手", "おじいさん", "祖父", "おじ",
+    "speaker 2", "speaker b", "person b", "話者2", "話者b"
+  ].some(k => s.includes(k)) || s === "b" || s === "2";
+
+  if (isFemale && !isMale) {
+    return { role_category: "female", role_label: "👩 Female (Aoi - 成人女性)", voice_id: "ja-JP-AoiNeural" };
+  }
+  if (isMale && !isFemale) {
+    return { role_category: "male", role_label: "👨 Male (Keita - 成人男性)", voice_id: "ja-JP-KeitaNeural" };
+  }
+
+  // 4. Conventional situational roles
+  if (s.includes("店員")) {
+    return { role_category: "female", role_label: "👩 Female (Aoi - 成人女性)", voice_id: "ja-JP-AoiNeural" };
+  }
+  if (s.includes("客")) {
+    return { role_category: "male", role_label: "👨 Male (Keita - 成人男性)", voice_id: "ja-JP-KeitaNeural" };
+  }
+
+  // 5. Contextual dialogue pairing: if paired with an already known speaker in the same script
+  if (Array.isArray(existingSpeakersInScript) && existingSpeakersInScript.length > 0) {
+    const other = existingSpeakersInScript.find(sp => sp && sp !== speakerName);
+    if (other) {
+      const otherConf = parseSpeakerRole(other, []);
+      if (otherConf.role_category === 'female') {
+        return { role_category: "male", role_label: "👨 Male (Keita - 成人男性)", voice_id: "ja-JP-KeitaNeural" };
+      } else if (otherConf.role_category === 'male') {
+        return { role_category: "female", role_label: "👩 Female (Aoi - 成人女性)", voice_id: "ja-JP-AoiNeural" };
+      }
+    }
+  }
+
+  // Male speakers & narrator default -> Keita
+  return { role_category: "male", role_label: "👨 Male (Keita - 成人男性)", voice_id: "ja-JP-KeitaNeural" };
 }
 
 export function getAudioDirectories(): string[] {
@@ -416,6 +470,28 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
       const processedTurns = [];
       let totalSpeechDuration = 0;
 
+      // Extract unique speakers for contextual distinct voice resolution
+      const uniqueSpeakers: string[] = Array.from(new Set(turns.map((t: any) => String(t.speaker || t.role || '').trim()).filter(Boolean)));
+      const resolvedVoiceBySpeaker: Record<string, string> = {};
+
+      if (uniqueSpeakers.length === 2) {
+        const [spk1, spk2] = uniqueSpeakers;
+        let v1 = speakerMap[spk1] ? (typeof speakerMap[spk1] === 'object' ? (speakerMap[spk1].voice_id || speakerMap[spk1].voice) : speakerMap[spk1]) : null;
+        let v2 = speakerMap[spk2] ? (typeof speakerMap[spk2] === 'object' ? (speakerMap[spk2].voice_id || speakerMap[spk2].voice) : speakerMap[spk2]) : null;
+
+        if (!v1) v1 = parseSpeakerRole(spk1, [spk2]).voice_id;
+        if (!v2) {
+          const conf2 = parseSpeakerRole(spk2, [spk1]);
+          if (conf2.voice_id === v1) {
+            v2 = conf2.role_category === 'female' ? 'ja-JP-NanamiNeural' : 'ja-JP-DaichiNeural';
+          } else {
+            v2 = conf2.voice_id;
+          }
+        }
+        resolvedVoiceBySpeaker[spk1] = v1;
+        resolvedVoiceBySpeaker[spk2] = v2;
+      }
+
       for (let tIdx = 0; tIdx < turns.length; tIdx++) {
         const turn = turns[tIdx];
         const spk = String(turn.speaker || 'Narrator').trim();
@@ -423,12 +499,15 @@ router.post('/tts/batch-dialogue', async (req: Request, res: Response) => {
         if (!text) continue;
 
         let voiceId = turn.voice || turn.voice_id;
+        if (!voiceId && resolvedVoiceBySpeaker[spk]) {
+          voiceId = resolvedVoiceBySpeaker[spk];
+        }
         if (!voiceId && speakerMap[spk]) {
           const m = speakerMap[spk];
           voiceId = typeof m === 'object' ? (m.voice_id || m.voice) : m;
         }
         if (!voiceId) {
-          voiceId = parseSpeakerRole(spk).voice_id;
+          voiceId = parseSpeakerRole(spk, uniqueSpeakers).voice_id;
         }
 
         const rate = parseFloat(turn.rate) || 1.0;
