@@ -848,6 +848,9 @@
                             <button id="btn-cbt-synth" onclick="synthesizeUnifiedCbtAudio()" disabled title="Load a CBT exam with dialogue scripts first" class="bg-cyan-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2">
                                 <span>⚡ GENERATE / ATTACH DIALOGUE AUDIO (TTS)</span>
                             </button>
+                            <button id="btn-cbt-auto-save" onclick="autoSynthesizeAndSaveToCloud()" disabled title="Synthesize and publish directly to cloud" class="bg-indigo-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2">
+                                <span>🚀 1-CLICK AUTO-SYNTHESIZE & SAVE TO CLOUD</span>
+                            </button>
                             <button onclick="saveCbtExamToDB()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-emerald-600/30 flex items-center gap-2">
                                 <span>💾 PUBLISH UNIFIED CBT EXAM TO SERVER</span>
                             </button>
@@ -1806,6 +1809,51 @@
             });
         }
 
+        // --- BACKGROUND DIALOGUE AUDIO PRE-SYNTHESIS ENGINE ---
+        function preCacheExamDialogueAudios(questions) {
+            if(!Array.isArray(questions) || questions.length === 0) return;
+            const dialogueQuestions = questions.filter(q => {
+                const d = q.dialogues || q.dialog || q.dialogue || q.script || q.conversation || q.turns;
+                return Array.isArray(d) && d.length > 0;
+            });
+            if(dialogueQuestions.length === 0) return;
+
+            let turnQueue = [];
+            dialogueQuestions.forEach((q, qIdx) => {
+                const turns = q.dialogues || q.dialog || q.dialogue || q.script || q.conversation || q.turns;
+                const uniqueSpeakers = Array.from(new Set(turns.map(t => String(t.speaker || t.role || '').trim()).filter(Boolean)));
+                turns.forEach(t => {
+                    if(!t.audio_base64 && !t.turn_audio_url) {
+                        const spk = String(t.speaker || t.role || "Speaker").trim();
+                        const spkConf = (typeof speakerVoiceMap === 'object' && speakerVoiceMap[spk]) ? speakerVoiceMap[spk] : detectSpeakerVoice(spk, uniqueSpeakers);
+                        const txt = String(t.text || t.content || "").trim();
+                        if(txt) {
+                            turnQueue.push({
+                                turn: t,
+                                text: txt,
+                                voiceId: t.voice || t.voice_id || spkConf.voice_id,
+                                speaker: spk
+                            });
+                        }
+                    }
+                });
+            });
+
+            if(turnQueue.length === 0) return;
+
+            // Stagger pre-synthesis requests in the background so audio is ready before the student reaches the listening section
+            turnQueue.forEach((item, idx) => {
+                setTimeout(async () => {
+                    try {
+                        if(!item.turn.audio_base64 && !item.turn.turn_audio_url) {
+                            const b64 = await fetchNeuralTtsAudio(item.text, item.voiceId, item.speaker);
+                            if(b64) item.turn.audio_base64 = b64;
+                        }
+                    } catch(e) {}
+                }, 300 + idx * 160);
+            });
+        }
+
         // --- PERSISTENT EXAM VISIBILITY ENGINE ---
         function getHiddenExamList() {
             try { return JSON.parse(localStorage.getItem('jft_hidden_exam_ids') || '[]'); } catch(e) { return []; }
@@ -2174,15 +2222,21 @@
                     if(qs && qs.length > 0 && (parsed.duration || parsed.passMark || qs[0]?.section || qs[0]?.options)) {
                         // Normalize dialogue structures bi-directionally
                         qs.forEach((q, qIdx) => {
-                            if(q.dialog && !q.dialogues) q.dialogues = q.dialog;
+                            if(!q.dialogues) {
+                                q.dialogues = q.dialog || q.dialogue || q.script || q.scripts || q.conversation || q.conversations || q.turns || null;
+                            }
                             if(q.dialogues && !q.dialog) q.dialog = q.dialogues;
                             const dList = q.dialogues || q.dialog;
                             if(Array.isArray(dList)) {
                                 dList.forEach((t, tIdx) => {
                                     if(t.content && !t.text) t.text = t.content;
                                     if(t.text && !t.content) t.content = t.text;
+                                    if(t.dialogue && !t.text) t.text = t.dialogue;
+                                    if(t.line && !t.text) t.text = t.line;
                                     if(t.role && !t.speaker) t.speaker = t.role;
                                     if(t.speaker && !t.role) t.role = t.speaker;
+                                    if(t.person && !t.speaker) { t.speaker = t.person; t.role = t.person; }
+                                    if(t.name && !t.speaker) { t.speaker = t.name; t.role = t.name; }
                                     if(!t.id) t.id = `turn_${q.id || qIdx}_${tIdx + 1}`;
                                 });
                             }
@@ -3911,15 +3965,26 @@
         // Update TTS synthesis button state based on parsedScripts availability
         function updateSynthButtonState() {
             const btn = document.getElementById('btn-cbt-synth');
-            if(!btn) return;
+            const autoBtn = document.getElementById('btn-cbt-auto-save');
             const hasScripts = parsedScripts && parsedScripts.length > 0;
-            btn.disabled = !hasScripts;
-            btn.title = hasScripts
-                ? `Synthesize TTS audio for ${parsedScripts.length} dialogue script(s)`
-                : 'Load a CBT exam with dialogue scripts first';
-            btn.className = hasScripts
-                ? 'bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-cyan-600/30 flex items-center gap-2'
-                : 'bg-cyan-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2';
+            if(btn) {
+                btn.disabled = !hasScripts;
+                btn.title = hasScripts
+                    ? `Synthesize TTS audio for ${parsedScripts.length} dialogue script(s)`
+                    : 'Load a CBT exam with dialogue scripts first';
+                btn.className = hasScripts
+                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-cyan-600/30 flex items-center gap-2'
+                    : 'bg-cyan-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2';
+            }
+            if(autoBtn) {
+                autoBtn.disabled = !hasScripts;
+                autoBtn.title = hasScripts
+                    ? `Auto-synthesize all ${parsedScripts.length} dialogue scripts and save to cloud`
+                    : 'Load a CBT exam with dialogue scripts first';
+                autoBtn.className = hasScripts
+                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-indigo-600/30 flex items-center gap-2'
+                    : 'bg-indigo-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2';
+            }
         }
 
         // Synthesize and bind dialogue audio for CBT questions (Chunked & Resilient)
@@ -4012,6 +4077,29 @@
             }
         }
 
+        async function autoSynthesizeAndSaveToCloud() {
+            if(!pendingAdminCbtJson || !parsedScripts || parsedScripts.length === 0) {
+                return alert("Please load a CBT exam with dialogue scripts first (either by uploading JSON or clicking '🎧 Studio / Synthesize' on an exam below).");
+            }
+            const btn = document.getElementById('btn-cbt-auto-save');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>⏳ Synthesizing & Publishing...</span>`;
+            }
+            try {
+                await synthesizeUnifiedCbtAudio();
+                await saveCbtExamToDB();
+            } catch(e) {
+                console.error("Auto synth & save error:", e);
+                alert("Auto synth & save note: " + e.message);
+            } finally {
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>🚀 1-CLICK AUTO-SYNTHESIZE & SAVE TO CLOUD</span>`;
+                }
+            }
+        }
+
         // --- CBT EXAM ENGINE ---
         function renderStudentCbtList() {
             const container = document.getElementById('cbt-list-container');
@@ -4064,6 +4152,8 @@
             const qs = found.questions || found.data?.questions || found.exam_data?.questions || found.examData || [];
             // Pre-cache exam illustration images during confirmation screen so questions render with 0 delay
             preCacheExamImages(qs);
+            // Pre-cache dialogue audio synthesis in the background for listening questions
+            preCacheExamDialogueAudios(qs);
 
             const duration = found.duration || found.data?.duration || 60;
             const passMark = found.passMark || found.data?.passMark || 200;
@@ -4395,9 +4485,11 @@
         async function fetchNeuralTtsAudio(text, voiceId, speaker) {
             if(!text || !String(text).trim()) return null;
             const endpoints = [
+                `${API_BASE}/api/tts/turn`,
                 '/api/tts/turn',
-                'https://my-website-new-fhe2.vercel.app/api/tts/turn',
-                'http://localhost:5000/api/tts/turn'
+                'http://localhost:5000/api/tts/turn',
+                'http://127.0.0.1:5000/api/tts/turn',
+                'https://my-website-new-fhe2.vercel.app/api/tts/turn'
             ];
             for (const url of endpoints) {
                 try {
@@ -4663,14 +4755,42 @@
                 try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
             }
 
-            const dialoguesList = (q.dialogues && Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
-                                : ((q.dialog && Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog : null);
+            const dialoguesList = (Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
+                                : (Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog
+                                : (Array.isArray(q.dialogue) && q.dialogue.length > 0) ? q.dialogue
+                                : (Array.isArray(q.script) && q.script.length > 0) ? q.script
+                                : (Array.isArray(q.conversation) && q.conversation.length > 0) ? q.conversation
+                                : (Array.isArray(q.turns) && q.turns.length > 0) ? q.turns
+                                : null;
             const hasDialogues = !!dialoguesList;
             const targetAudio = q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '') || q.audioUrl || '';
 
             if(isListeningSec || targetAudio || hasDialogues) {
                 audioBox.classList.remove('hidden');
                 updateAudioPlaysBadge(qKey);
+
+                // Auto-pre-warm dialogue speech turns in background whenever dialogues exist
+                if(hasDialogues) {
+                    setTimeout(() => {
+                        if(Array.isArray(dialoguesList) && !isCbtDialoguePlaying) {
+                            const uniqueSpeakers = Array.from(new Set(dialoguesList.map(d => String(d.speaker || d.role || '').trim()).filter(Boolean)));
+                            dialoguesList.forEach((line, lIdx) => {
+                                if(!line.audio_base64 && !line.turn_audio_url) {
+                                    const spk = line.speaker || line.role || "";
+                                    const spkConf = (typeof speakerVoiceMap === 'object' && speakerVoiceMap[spk]) ? speakerVoiceMap[spk] : detectSpeakerVoice(spk, uniqueSpeakers);
+                                    const txt = line.text || line.content || "";
+                                    if(txt) {
+                                        setTimeout(() => {
+                                            fetchNeuralTtsAudio(txt, line.voice || line.voice_id || spkConf.voice_id, spk).then(b64 => {
+                                                if(b64) line.audio_base64 = b64;
+                                            }).catch(() => {});
+                                        }, lIdx * 100);
+                                    }
+                                }
+                            });
+                        }
+                    }, 50);
+                }
 
                 if(targetAudio && targetAudio.trim() !== "") {
                     audioPlayer.classList.remove('hidden');
@@ -4679,8 +4799,9 @@
                     audioPlayer.src = resolvedAudio;
 
                     if(speechBtn) {
-                        if(hasDialogues && !targetAudio.startsWith('data:') && !targetAudio.includes('assets/')) {
+                        if(hasDialogues) {
                             speechBtn.classList.remove('hidden');
+                            speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
                         } else {
                             speechBtn.classList.add('hidden');
                         }
@@ -4703,13 +4824,13 @@
                             audioPlayer.src = hasDialogues
                                 ? `${prodCdn}/assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
                                 : `${prodCdn}/assets/${upperFn}`;
-                        } else if(audioAttempt === 3) {
-                            audioPlayer.src = `${prodCdn}/api/audio/${audioFn}`;
                         } else {
                             audioPlayer.onerror = null;
-                            console.warn("Audio file fallback exhausted, enabling native in-browser audio for:", rawAudio);
+                            console.warn("Static audio file not found on disk, enabling multi-speaker dialogue speech for:", rawAudio);
                             if(hasDialogues && speechBtn) {
                                 speechBtn.classList.remove('hidden');
+                                speechBtn.className = "px-3 py-1 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg font-bold text-xs shadow-md transition flex items-center gap-1.5 animate-pulse";
+                                speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
                             }
                         }
                     };
@@ -4721,6 +4842,11 @@
                             alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
                             return;
                         }
+                        // If static audio file is missing or failed, immediately trigger multi-speaker dialogue speech
+                        if(hasDialogues && (audioPlayer.error || !audioPlayer.currentSrc || audioPlayer.readyState === 0)) {
+                            audioPlayer.pause();
+                            playCbtDialogueSpeech();
+                        }
                     };
                     audioPlayer.onended = () => {
                         cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
@@ -4730,29 +4856,10 @@
                 } else if(hasDialogues) {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
-                    if(speechBtn) speechBtn.classList.remove('hidden');
-
-                    // Defer background neural turn pre-fetch slightly so question image gets top network priority
-                    setTimeout(() => {
-                        if(Array.isArray(dialoguesList) && !isCbtDialoguePlaying) {
-                            const uniqueSpeakers = Array.from(new Set(dialoguesList.map(d => String(d.speaker || d.role || '').trim()).filter(Boolean)));
-                            dialoguesList.forEach((line, lIdx) => {
-                                if(!line.audio_base64 && !line.turn_audio_url) {
-                                    const spk = line.speaker || line.role || "";
-                                    const spkConf = speakerVoiceMap[spk] || detectSpeakerVoice(spk, uniqueSpeakers);
-                                    const txt = line.text || line.content || "";
-                                    if(txt) {
-                                        // Stagger turn requests by 200ms to avoid saturated HTTP queue
-                                        setTimeout(() => {
-                                            fetchNeuralTtsAudio(txt, line.voice || line.voice_id || spkConf.voice_id, spk).then(b64 => {
-                                                if(b64) line.audio_base64 = b64;
-                                            }).catch(() => {});
-                                        }, lIdx * 200);
-                                    }
-                                }
-                            });
-                        }
-                    }, 180);
+                    if(speechBtn) {
+                        speechBtn.classList.remove('hidden');
+                        speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
+                    }
                 } else {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.src = "";
@@ -5610,6 +5717,9 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button onclick="loadCbtExamToStudio('${ex.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition">
+                            🎧 Studio / Synthesize
+                        </button>
                         <button onclick="toggleCbtExamActive('${ex.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition ${isActive ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'}">
                             ${isActive ? '👁️ Hide' : '👁️ Show'}
                         </button>
@@ -5620,6 +5730,19 @@
                 </div>
             `;
             }).join('');
+        }
+
+        function loadCbtExamToStudio(examId) {
+            const ex = allCbtExams.find(x => String(x.id) === String(examId) || x.title === String(examId));
+            if(!ex) return alert("Exam not found");
+            previewUnifiedCbtStudio(ex, ex.title);
+            const studioEl = document.getElementById('unified-cbt-studio');
+            if(studioEl) {
+                studioEl.scrollIntoView({ behavior: 'smooth' });
+                studioEl.classList.add('ring-2', 'ring-cyan-400');
+                setTimeout(() => studioEl.classList.remove('ring-2', 'ring-cyan-400'), 2500);
+            }
+            alert(`✓ "${ex.title}" loaded into Unified CBT Studio!\n\n🎧 Total Questions: ${(ex.questions || []).length}\n\n👉 You can now:\n1. Click "⚡ GENERATE / ATTACH DIALOGUE AUDIO (TTS)" to synthesize audio.\n2. Or click "🚀 1-CLICK AUTO-SYNTHESIZE & SAVE TO CLOUD" to synthesize and save directly to Supabase!`);
         }
 
         async function syncExamVisibilityToggle(target, type) {
