@@ -297,10 +297,50 @@ router.post('/exams/:id/toggle-active', async (req, res) => {
         let fileExams = loadExamsFromFile();
         const item = fileExams.find(x => x.id === id || x.exam_id === id);
         let newState = true;
+        let title = '';
         if (item) {
             item.isActive = item.isActive === false ? true : false;
             newState = item.isActive;
+            title = item.title || '';
             saveExamsToFile(fileExams);
+        }
+        // 1. Sync to PostgreSQL
+        try {
+            await pool.query(`UPDATE cbt_saved_exams SET exam_data = jsonb_set(COALESCE(exam_data, '{}'), '{isActive}', $1::jsonb), updated_at = NOW() WHERE exam_id = $2`, [JSON.stringify(newState), id]);
+        }
+        catch (pgErr) {
+            console.warn('PostgreSQL toggle sync skipped:', pgErr.message);
+        }
+        // 2. Sync to Supabase
+        if (title) {
+            try {
+                const supabaseUrl = process.env.SUPABASE_URL || 'https://xyxjoaluucliwwvprlvk.supabase.co';
+                const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh';
+                const supabaseTable = process.env.SUPABASE_TABLE || 'JFT Mock Test';
+                const checkRes = await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?title=eq.${encodeURIComponent(title)}&select=id,data`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (checkRes.ok) {
+                    const rows = await checkRes.json();
+                    if (Array.isArray(rows) && rows.length > 0) {
+                        const existingData = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : (rows[0].data || {});
+                        existingData.isActive = newState;
+                        await fetch(`${supabaseUrl}/rest/v1/${encodeURIComponent(supabaseTable)}?id=eq.${rows[0].id}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${supabaseKey}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=minimal'
+                            },
+                            body: JSON.stringify({ data: existingData })
+                        });
+                    }
+                }
+            }
+            catch (sbErr) {
+                console.warn('Supabase toggle sync note:', sbErr.message);
+            }
         }
         res.json({ success: true, id, isActive: newState });
     }

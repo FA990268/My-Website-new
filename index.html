@@ -845,7 +845,7 @@
                     <div class="flex flex-wrap justify-between items-center gap-4 mt-6 pt-4 border-t border-white/10">
                         <div id="cbt-json-status" class="text-xs text-gray-400">Ready to load or upload CBT Exam JSON.</div>
                         <div class="flex flex-wrap gap-3">
-                            <button id="btn-cbt-synth" onclick="synthesizeUnifiedCbtAudio()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-cyan-600/30 flex items-center gap-2">
+                            <button id="btn-cbt-synth" onclick="synthesizeUnifiedCbtAudio()" disabled title="Load a CBT exam with dialogue scripts first" class="bg-cyan-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2">
                                 <span>⚡ GENERATE / ATTACH DIALOGUE AUDIO (TTS)</span>
                             </button>
                             <button onclick="saveCbtExamToDB()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-emerald-600/30 flex items-center gap-2">
@@ -1945,6 +1945,8 @@
                     previewUnifiedCbtStudio(allCbtExams[0]);
                 } catch(e) {}
             }
+            // Ensure synth button reflects loaded state
+            setTimeout(updateSynthButtonState, 50);
         }
 
         // --- SUPABASE CLOUD SYNC & STORAGE ---
@@ -3316,6 +3318,7 @@
             if(statusEl) {
                 statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✓ Exam "${title}" loaded (${qs.length} questions, ${parsedScripts.length} dialogue scripts)</span>`;
             }
+            updateSynthButtonState();
         }
 
         function processUnifiedCbtData(raw, sourceName, isUserUpload = false) {
@@ -3651,9 +3654,25 @@
             }
         }
 
+        // Update TTS synthesis button state based on parsedScripts availability
+        function updateSynthButtonState() {
+            const btn = document.getElementById('btn-cbt-synth');
+            if(!btn) return;
+            const hasScripts = parsedScripts && parsedScripts.length > 0;
+            btn.disabled = !hasScripts;
+            btn.title = hasScripts
+                ? `Synthesize TTS audio for ${parsedScripts.length} dialogue script(s)`
+                : 'Load a CBT exam with dialogue scripts first';
+            btn.className = hasScripts
+                ? 'bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-black text-xs md:text-sm transition shadow-lg shadow-cyan-600/30 flex items-center gap-2'
+                : 'bg-cyan-600/30 text-white/40 cursor-not-allowed px-5 py-2.5 rounded-xl font-black text-xs md:text-sm flex items-center gap-2';
+        }
+
         // Synthesize and bind dialogue audio for CBT questions (Chunked & Resilient)
         async function synthesizeUnifiedCbtAudio() {
-            if(parsedScripts.length === 0) return alert("Please load or upload a CBT exam with dialogue scripts first!");
+            if(!parsedScripts || parsedScripts.length === 0 || !pendingAdminCbtJson) {
+                return alert("Please load or upload a CBT exam with dialogue scripts first!\n\nUse the 'Upload CBT Exam JSON' button above.");
+            }
             const btn = document.getElementById('btn-cbt-synth');
             const pauseSec = parseFloat(document.getElementById('cbt-speaker-pause')?.value) || 0.8;
 
@@ -5364,6 +5383,8 @@
                     renderAdminCbtList();
                     renderHomeExams();
                     if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                    // Fallback: sync directly to Supabase if backend is unavailable
+                    try { await saveExamToSupabase(ex); } catch(sbErr) {}
                 }
             }
         }
@@ -5757,13 +5778,19 @@
             }).join('');
         }
 
-        function toggleModelExamActive(idx) {
+        async function toggleModelExamActive(idx) {
             if(idx >= 0 && idx < allExams.length) {
                 allExams[idx].isActive = (allExams[idx].isActive === false) ? true : false;
-                localStorage.setItem('jft_exam_db', JSON.stringify(allExams));
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
                 renderAdminModelList();
                 renderHomeExams();
                 if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
+                // Sync isActive to Supabase so other devices respect visibility
+                try {
+                    await saveExamToSupabase(allExams[idx]);
+                } catch(e) {
+                    console.warn('Model exam toggle Supabase sync skipped:', e);
+                }
             }
         }
 
