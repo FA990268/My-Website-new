@@ -1189,13 +1189,11 @@
                         <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                             🔊 Listening Audio
                         </span>
-                        <div class="flex items-center gap-2">
-                            <button id="cbt-dialogue-speech-btn" type="button" onclick="playCbtDialogueSpeech()" class="hidden px-2.5 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded-md font-semibold text-[11px] shadow-xs transition">
-                                ▶ Play Audio
-                            </button>
-                            <span id="cbt-audio-plays" class="text-[11px] font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full transition-colors">Played: 0 / 2</span>
-                        </div>
+                        <span id="cbt-audio-plays" class="text-[11px] font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full transition-colors">Played: 0 / 2</span>
                     </div>
+                    <button id="cbt-dialogue-speech-btn" type="button" onclick="playCbtDialogueSpeech()" class="hidden w-full py-2 px-4 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-2">
+                        ▶ Play Audio
+                    </button>
                     <audio id="cbt-audio-player" controls class="w-full h-9 rounded-lg"></audio>
                     <div id="cbt-speech-speaker-indicator" class="hidden text-xs text-slate-700 mt-2 px-2.5 py-1.5 rounded-lg bg-sky-50/80 border border-sky-100 flex items-center gap-2"></div>
                 </div>
@@ -1809,49 +1807,234 @@
             });
         }
 
-        // --- BACKGROUND DIALOGUE AUDIO PRE-SYNTHESIS ENGINE ---
-        function preCacheExamDialogueAudios(questions) {
-            if(!Array.isArray(questions) || questions.length === 0) return;
-            const dialogueQuestions = questions.filter(q => {
-                const d = q.dialogues || q.dialog || q.dialogue || q.script || q.conversation || q.turns;
-                return Array.isArray(d) && d.length > 0;
-            });
-            if(dialogueQuestions.length === 0) return;
+        // --- DIALOGUE EXTRACTION & AUTO-SYNTHESIS ENGINE ---
+        function getQuestionDialogues(q) {
+            if(!q || typeof q !== 'object') return null;
+            const candidates = [q.dialogues, q.dialog, q.dialogue, q.script, q.scripts, q.conversation, q.conversations, q.turns];
+            for(const list of candidates) {
+                if(Array.isArray(list) && list.length > 0) return list;
+            }
+            return null;
+        }
 
-            let turnQueue = [];
-            dialogueQuestions.forEach((q, qIdx) => {
-                const turns = q.dialogues || q.dialog || q.dialogue || q.script || q.conversation || q.turns;
-                const uniqueSpeakers = Array.from(new Set(turns.map(t => String(t.speaker || t.role || '').trim()).filter(Boolean)));
-                turns.forEach(t => {
-                    if(!t.audio_base64 && !t.turn_audio_url) {
-                        const spk = String(t.speaker || t.role || "Speaker").trim();
-                        const spkConf = (typeof speakerVoiceMap === 'object' && speakerVoiceMap[spk]) ? speakerVoiceMap[spk] : detectSpeakerVoice(spk, uniqueSpeakers);
-                        const txt = String(t.text || t.content || "").trim();
-                        if(txt) {
-                            turnQueue.push({
-                                turn: t,
-                                text: txt,
-                                voiceId: t.voice || t.voice_id || spkConf.voice_id,
-                                speaker: spk
-                            });
+        function getTtsApiEndpoints(apiPath) {
+            const isLocalOrFile = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const urls = [];
+            if(API_BASE) urls.push(`${API_BASE}${apiPath}`);
+            if(window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                urls.push(apiPath);
+            }
+            if(isLocalOrFile) {
+                urls.push(`http://localhost:5000${apiPath}`);
+                urls.push(`http://127.0.0.1:5000${apiPath}`);
+            }
+            urls.push(`https://my-website-new-fhe2.vercel.app${apiPath}`);
+            return Array.from(new Set(urls));
+        }
+
+        function needsDialogueMasterSynthesis(q) {
+            const dList = getQuestionDialogues(q);
+            if(!dList) return false;
+            if(q._stitchedBlobUrl) return false;
+            if(q.masterAudio && q.masterAudio.audio_base64) return false;
+
+            const rawAudio = String(q.audio || q.audioUrl || '').trim();
+            if(rawAudio.startsWith('data:') || rawAudio.startsWith('blob:')) return false;
+            if(rawAudio.startsWith('https://') && !rawAudio.includes('my-website-new-fhe2.vercel.app/assets/audio/dialogue_')) {
+                return false; // Explicitly hosted external CDN / Supabase Storage audio
+            }
+            return true;
+        }
+
+        function encodeAudioBufferToWavBlob(audioBuffer) {
+            const numSamples = audioBuffer.length;
+            const sampleRate = audioBuffer.sampleRate;
+            const channelData = audioBuffer.getChannelData(0);
+            const buffer = new ArrayBuffer(44 + numSamples * 2);
+            const view = new DataView(buffer);
+
+            const writeStr = (offset, str) => {
+                for(let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+            };
+            writeStr(0, 'RIFF');
+            view.setUint32(4, 36 + numSamples * 2, true);
+            writeStr(8, 'WAVE');
+            writeStr(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM
+            view.setUint16(22, 1, true); // Mono
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeStr(36, 'data');
+            view.setUint32(40, numSamples * 2, true);
+
+            let offset = 44;
+            for(let i = 0; i < numSamples; i++) {
+                const s = Math.max(-1, Math.min(1, channelData[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                offset += 2;
+            }
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        async function stitchTurnAudioBlobsToWavUrl(turnSources, pauseSeconds = 0.65) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+            if(!AudioCtx || !OfflineCtx || !Array.isArray(turnSources) || turnSources.length === 0) return null;
+
+            try {
+                const tempCtx = new AudioCtx();
+                const decodedList = [];
+                for(const src of turnSources) {
+                    const res = await fetch(src);
+                    const arrBuf = await res.arrayBuffer();
+                    const audioBuf = await tempCtx.decodeAudioData(arrBuf);
+                    decodedList.push(audioBuf);
+                }
+                if(tempCtx.close) { try { await tempCtx.close(); } catch(e) {} }
+                if(decodedList.length === 0) return null;
+
+                const sampleRate = decodedList[0].sampleRate || 24000;
+                const totalDuration = decodedList.reduce((acc, b, idx) => acc + b.duration + (idx < decodedList.length - 1 ? pauseSeconds : 0), 0.1);
+                const offline = new OfflineCtx(1, Math.ceil(totalDuration * sampleRate), sampleRate);
+
+                let cursor = 0;
+                decodedList.forEach((buf, idx) => {
+                    const srcNode = offline.createBufferSource();
+                    srcNode.buffer = buf;
+                    srcNode.connect(offline.destination);
+                    srcNode.start(cursor);
+                    cursor += buf.duration + (idx < decodedList.length - 1 ? pauseSeconds : 0);
+                });
+
+                const rendered = await offline.startRendering();
+                const wavBlob = encodeAudioBufferToWavBlob(rendered);
+                return URL.createObjectURL(wavBlob);
+            } catch(e) {
+                console.warn('Turn audio stitching fallback skipped:', e);
+                return null;
+            }
+        }
+
+        async function fetchMasterDialogueAudio(q, qKey = 'q_dialogue') {
+            if(!q) return null;
+            if(q._stitchedBlobUrl) return q._stitchedBlobUrl;
+            if(q.masterAudio && q.masterAudio.audio_base64) {
+                return resolveAudioUrl(q.masterAudio.audio_base64);
+            }
+            const existingRaw = String(q.audio || q.audioUrl || '').trim();
+            if(existingRaw.startsWith('data:') || existingRaw.startsWith('blob:')) {
+                return resolveAudioUrl(existingRaw);
+            }
+
+            if(q._masterAudioPromise) return q._masterAudioPromise;
+
+            const dList = getQuestionDialogues(q);
+            if(!dList || dList.length === 0) return null;
+
+            const uniqueSpeakers = Array.from(new Set(dList.map(d => String(d.speaker || d.role || d.person || '').trim()).filter(Boolean)));
+            const preparedTurns = dList.map((t, idx) => {
+                const spk = String(t.speaker || t.role || t.person || `Speaker ${idx + 1}`).trim();
+                const spkConf = (typeof speakerVoiceMap === 'object' && speakerVoiceMap[spk])
+                    ? speakerVoiceMap[spk]
+                    : (typeof detectSpeakerVoice === 'function' ? detectSpeakerVoice(spk, uniqueSpeakers) : {});
+                return {
+                    id: t.id || `${qKey}_t${idx + 1}`,
+                    speaker: spk,
+                    text: String(t.text || t.content || t.dialogue || t.line || '').trim(),
+                    voice: t.voice || t.voice_id || spkConf.voice_id
+                };
+            }).filter(t => t.text);
+
+            if(preparedTurns.length === 0) return null;
+
+            q._masterAudioPromise = (async () => {
+                // 1. Primary: Batch-dialogue API returns unified continuous MP3 with natural speaker pauses
+                const endpoints = getTtsApiEndpoints('/api/tts/batch-dialogue');
+                for(const url of endpoints) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 18000);
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pause_seconds: 0.7,
+                                speaker_map: (typeof speakerVoiceMap === 'object' && speakerVoiceMap) ? speakerVoiceMap : {},
+                                scripts: [{ id: String(q.id || qKey), dialogues: preparedTurns }]
+                            }),
+                            signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+                        if(res.ok) {
+                            const data = await res.json();
+                            const s = data && data.success && Array.isArray(data.scripts) ? data.scripts[0] : null;
+                            if(s && s.masterAudio && s.masterAudio.audio_base64) {
+                                q.masterAudio = s.masterAudio;
+                                q.audio = resolveAudioUrl(s.masterAudio.audio_base64);
+                                if(Array.isArray(s.dialogues)) {
+                                    dList.forEach((origTurn, idx) => {
+                                        if(s.dialogues[idx] && s.dialogues[idx].audio_base64) {
+                                            origTurn.audio_base64 = s.dialogues[idx].audio_base64;
+                                        }
+                                    });
+                                }
+                                try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
+                                return q.audio;
+                            }
+                        }
+                    } catch(e) {
+                        // Try next endpoint
+                    }
+                }
+
+                // 2. Fallback: Synthesize each turn in parallel & stitch client-side into playable WAV Blob for <audio controls>
+                try {
+                    const turnAudioList = await Promise.all(preparedTurns.map(async (pt, idx) => {
+                        const existingTurn = dList[idx] && (dList[idx].audio_base64 || dList[idx].turn_audio_url);
+                        if(existingTurn) return resolveAudioUrl(existingTurn);
+                        const b64 = await fetchNeuralTtsAudio(pt.text, pt.voice, pt.speaker);
+                        if(b64 && dList[idx]) dList[idx].audio_base64 = b64;
+                        return b64 ? resolveAudioUrl(b64) : null;
+                    }));
+                    const validTurns = turnAudioList.filter(Boolean);
+                    if(validTurns.length === preparedTurns.length && validTurns.length > 0) {
+                        const wavUrl = await stitchTurnAudioBlobsToWavUrl(validTurns, 0.65);
+                        if(wavUrl) {
+                            q._stitchedBlobUrl = wavUrl;
+                            return wavUrl;
                         }
                     }
-                });
-            });
+                } catch(e) {}
 
-            if(turnQueue.length === 0) return;
+                q._masterAudioPromise = null;
+                return null;
+            })();
 
-            // Stagger pre-synthesis requests in the background so audio is ready before the student reaches the listening section
-            turnQueue.forEach((item, idx) => {
-                setTimeout(async () => {
-                    try {
-                        if(!item.turn.audio_base64 && !item.turn.turn_audio_url) {
-                            const b64 = await fetchNeuralTtsAudio(item.text, item.voiceId, item.speaker);
-                            if(b64) item.turn.audio_base64 = b64;
-                        }
-                    } catch(e) {}
-                }, 300 + idx * 160);
-            });
+            return q._masterAudioPromise;
+        }
+
+        function preCacheExamDialogueAudios(questions) {
+            if(!Array.isArray(questions) || questions.length === 0) return;
+            const pendingQuestions = questions.filter(q => needsDialogueMasterSynthesis(q));
+            if(pendingQuestions.length === 0) return;
+
+            // Process up to 2 questions concurrently in the background so listening audio is ready immediately
+            let cursor = 0;
+            const workerCount = Math.min(2, pendingQuestions.length);
+            for(let w = 0; w < workerCount; w++) {
+                (async () => {
+                    while(cursor < pendingQuestions.length) {
+                        const myIdx = cursor++;
+                        const q = pendingQuestions[myIdx];
+                        try {
+                            await fetchMasterDialogueAudio(q, q.id || `pre_${myIdx}`);
+                        } catch(e) {}
+                    }
+                })();
+            }
         }
 
         // --- PERSISTENT EXAM VISIBILITY ENGINE ---
@@ -4224,6 +4407,7 @@
 
             cbtQuestions = activeCbtExam.questions || activeCbtExam.data?.questions || activeCbtExam.exam_data?.questions || activeCbtExam.examData || [];
             preCacheExamImages(cbtQuestions);
+            preCacheExamDialogueAudios(cbtQuestions);
             cbtCurrentIdx = 0;
             cbtAnswers = {};
             cbtFlags = {};
@@ -4259,6 +4443,7 @@
             }
             config = found.examData || found.items || [];
             preCacheExamImages(config);
+            preCacheExamDialogueAudios(config);
             time = (found.duration || 60) * 60;
             const nameEl = document.getElementById('confirm-model-name');
             if(nameEl) nameEl.innerText = found.modelName || found.name || `Model Test (${group})`;
@@ -4484,13 +4669,7 @@
 
         async function fetchNeuralTtsAudio(text, voiceId, speaker) {
             if(!text || !String(text).trim()) return null;
-            const endpoints = [
-                `${API_BASE}/api/tts/turn`,
-                '/api/tts/turn',
-                'http://localhost:5000/api/tts/turn',
-                'http://127.0.0.1:5000/api/tts/turn',
-                'https://my-website-new-fhe2.vercel.app/api/tts/turn'
-            ];
+            const endpoints = getTtsApiEndpoints('/api/tts/turn');
             for (const url of endpoints) {
                 try {
                     const controller = new AbortController();
@@ -4743,131 +4922,135 @@
                 imgBox.classList.add('hidden');
             }
 
-            // Audio Player with Prometric 2-plays limit, Multi-Speaker Consecutive Speech & Multi-Tier Fallback
+            // Audio Player with Prometric 2-plays limit & Automatic Master TTS Synthesis
             const audioBox = document.getElementById('cbt-audio-box');
             const audioPlayer = document.getElementById('cbt-audio-player');
             const speechBtn = document.getElementById('cbt-dialogue-speech-btn');
             const speechIndicator = document.getElementById('cbt-speech-speaker-indicator');
 
-            // Reset any ongoing speech or playback when rendering a question
-            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
-            if(audioPlayer) {
-                try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
+            function bindCbtAudioPlayerHandlers(el, key) {
+                if(!el) return;
+                el.onplay = () => {
+                    if((cbtAudioPlays[key] || 0) >= 2) {
+                        el.pause();
+                        el.currentTime = 0;
+                        alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
+                        return;
+                    }
+                };
+                el.onended = () => {
+                    cbtAudioPlays[key] = (cbtAudioPlays[key] || 0) + 1;
+                    updateAudioPlaysBadge(key);
+                    saveCbtSession();
+                };
             }
 
-            const dialoguesList = (Array.isArray(q.dialogues) && q.dialogues.length > 0) ? q.dialogues
-                                : (Array.isArray(q.dialog) && q.dialog.length > 0) ? q.dialog
-                                : (Array.isArray(q.dialogue) && q.dialogue.length > 0) ? q.dialogue
-                                : (Array.isArray(q.script) && q.script.length > 0) ? q.script
-                                : (Array.isArray(q.conversation) && q.conversation.length > 0) ? q.conversation
-                                : (Array.isArray(q.turns) && q.turns.length > 0) ? q.turns
-                                : null;
+            // Reset any ongoing speech or playback when rendering a question
+            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
+            if(speechBtn) speechBtn.classList.add('hidden');
+            if(speechIndicator) speechIndicator.classList.add('hidden');
+            if(audioPlayer) {
+                try { audioPlayer.pause(); audioPlayer.currentTime = 0; } catch(e) {}
+                audioPlayer.onerror = null;
+                audioPlayer.onplay = null;
+                audioPlayer.onended = null;
+            }
+
+            const dialoguesList = getQuestionDialogues(q);
             const hasDialogues = !!dialoguesList;
-            const targetAudio = q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '') || q.audioUrl || '';
+            const targetAudio = q._stitchedBlobUrl || q.audio || (hasDialogues && q.masterAudio ? (q.masterAudio.audio_base64 || q.masterAudio.audioUrl) : '') || q.audioUrl || '';
+            const mustSynth = needsDialogueMasterSynthesis(q);
+
+            const applyStaticAudioToPlayer = (rawStatic) => {
+                if(!rawStatic || !rawStatic.trim()) return false;
+                audioPlayer.classList.remove('hidden');
+                if(speechBtn) speechBtn.classList.add('hidden');
+
+                const rawAudio = rawStatic.trim();
+                audioPlayer.src = resolveAudioUrl(rawAudio);
+                bindCbtAudioPlayerHandlers(audioPlayer, qKey);
+
+                let audioAttempt = 0;
+                const audioFn = rawAudio.split('/').pop().trim().replace(/^dialogue_/, '');
+                const isSingleLetter = /^[a-iA-I]\.mp3$/i.test(audioFn);
+                const upperFn = isSingleLetter ? audioFn.toUpperCase() : audioFn;
+                const lowerFn = isSingleLetter ? audioFn.toLowerCase() : audioFn;
+                const prodCdn = 'https://my-website-new-fhe2.vercel.app';
+
+                audioPlayer.onerror = () => {
+                    audioAttempt++;
+                    if(audioAttempt === 1) {
+                        audioPlayer.src = hasDialogues
+                            ? `assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
+                            : (isSingleLetter ? `assets/audio/${upperFn}` : `assets/audio_x/${lowerFn}`);
+                    } else if(audioAttempt === 2) {
+                        audioPlayer.src = hasDialogues
+                            ? `${prodCdn}/assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
+                            : `${prodCdn}/assets/${upperFn}`;
+                    } else if(audioAttempt === 3) {
+                        audioPlayer.src = `${prodCdn}/api/audio/${audioFn}`;
+                    } else {
+                        audioPlayer.onerror = null;
+                        // Fallback to single Play button only when static audio cannot load offline
+                        if(hasDialogues && speechBtn) {
+                            audioPlayer.classList.add('hidden');
+                            speechBtn.classList.remove('hidden');
+                            updateAudioPlaysBadge(qKey);
+                        }
+                    }
+                };
+                return true;
+            };
 
             if(isListeningSec || targetAudio || hasDialogues) {
                 audioBox.classList.remove('hidden');
                 updateAudioPlaysBadge(qKey);
 
-                // Auto-pre-warm dialogue speech turns in background whenever dialogues exist
-                if(hasDialogues) {
-                    setTimeout(() => {
-                        if(Array.isArray(dialoguesList) && !isCbtDialoguePlaying) {
-                            const uniqueSpeakers = Array.from(new Set(dialoguesList.map(d => String(d.speaker || d.role || '').trim()).filter(Boolean)));
-                            dialoguesList.forEach((line, lIdx) => {
-                                if(!line.audio_base64 && !line.turn_audio_url) {
-                                    const spk = line.speaker || line.role || "";
-                                    const spkConf = (typeof speakerVoiceMap === 'object' && speakerVoiceMap[spk]) ? speakerVoiceMap[spk] : detectSpeakerVoice(spk, uniqueSpeakers);
-                                    const txt = line.text || line.content || "";
-                                    if(txt) {
-                                        setTimeout(() => {
-                                            fetchNeuralTtsAudio(txt, line.voice || line.voice_id || spkConf.voice_id, spk).then(b64 => {
-                                                if(b64) line.audio_base64 = b64;
-                                            }).catch(() => {});
-                                        }, lIdx * 100);
-                                    }
-                                }
-                            });
-                        }
-                    }, 50);
-                }
-
-                if(targetAudio && targetAudio.trim() !== "") {
+                if(mustSynth) {
+                    // Automatically synthesize unified multi-speaker MP3 straight into <audio id="cbt-audio-player">
                     audioPlayer.classList.remove('hidden');
-                    const rawAudio = targetAudio.trim();
-                    const resolvedAudio = resolveAudioUrl(rawAudio);
-                    audioPlayer.src = resolvedAudio;
-
-                    if(speechBtn) {
-                        if(hasDialogues) {
-                            speechBtn.classList.remove('hidden');
-                            speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
-                        } else {
-                            speechBtn.classList.add('hidden');
-                        }
+                    audioPlayer.removeAttribute('src');
+                    try { audioPlayer.load(); } catch(e) {}
+                    if(speechBtn) speechBtn.classList.add('hidden');
+                    if(speechIndicator) {
+                        speechIndicator.classList.remove('hidden');
+                        speechIndicator.innerHTML = `<span class="flex items-center gap-2 text-slate-600 text-xs font-medium"><span class="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span><span>Preparing dialogue audio...</span></span>`;
                     }
 
-                    let audioAttempt = 0;
-                    const audioFn = rawAudio.split('/').pop().trim().replace(/^dialogue_/, '');
-                    const isSingleLetter = /^[a-iA-I]\.mp3$/i.test(audioFn);
-                    const upperFn = isSingleLetter ? audioFn.toUpperCase() : audioFn;
-                    const lowerFn = isSingleLetter ? audioFn.toLowerCase() : audioFn;
-                    const prodCdn = 'https://my-website-new-fhe2.vercel.app';
+                    fetchMasterDialogueAudio(q, qKey).then(synthesizedSrc => {
+                        if(cbtQuestions[cbtCurrentIdx] !== q) return;
+                        if(speechIndicator) speechIndicator.classList.add('hidden');
 
-                    audioPlayer.onerror = () => {
-                        audioAttempt++;
-                        if(audioAttempt === 1) {
-                            audioPlayer.src = hasDialogues
-                                ? `assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
-                                : (isSingleLetter ? `assets/audio/${upperFn}` : `assets/audio_x/${lowerFn}`);
-                        } else if(audioAttempt === 2) {
-                            audioPlayer.src = hasDialogues
-                                ? `${prodCdn}/assets/audio/dialogue_${lowerFn.replace(/\.mp3$/i, '')}.mp3`
-                                : `${prodCdn}/assets/${upperFn}`;
-                        } else {
-                            audioPlayer.onerror = null;
-                            console.warn("Static audio file not found on disk, enabling multi-speaker dialogue speech for:", rawAudio);
-                            if(hasDialogues && speechBtn) {
+                        if(synthesizedSrc) {
+                            if(speechBtn) speechBtn.classList.add('hidden');
+                            audioPlayer.classList.remove('hidden');
+                            audioPlayer.src = synthesizedSrc;
+                            bindCbtAudioPlayerHandlers(audioPlayer, qKey);
+                        } else if(!applyStaticAudioToPlayer(targetAudio)) {
+                            audioPlayer.classList.add('hidden');
+                            if(speechBtn) {
                                 speechBtn.classList.remove('hidden');
-                                speechBtn.className = "px-3 py-1 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg font-bold text-xs shadow-md transition flex items-center gap-1.5 animate-pulse";
-                                speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
+                                updateAudioPlaysBadge(qKey);
                             }
                         }
-                    };
-
-                    audioPlayer.onplay = () => {
-                        if((cbtAudioPlays[qKey] || 0) >= 2) {
-                            audioPlayer.pause();
-                            audioPlayer.currentTime = 0;
-                            alert("In JFT-Basic CBT rules, listening audio can only be played up to 2 times.");
-                            return;
-                        }
-                        // If static audio file is missing or failed, immediately trigger multi-speaker dialogue speech
-                        if(hasDialogues && (audioPlayer.error || !audioPlayer.currentSrc || audioPlayer.readyState === 0)) {
-                            audioPlayer.pause();
-                            playCbtDialogueSpeech();
-                        }
-                    };
-                    audioPlayer.onended = () => {
-                        cbtAudioPlays[qKey] = (cbtAudioPlays[qKey] || 0) + 1;
-                        updateAudioPlaysBadge(qKey);
-                        saveCbtSession();
-                    };
+                    });
+                } else if(targetAudio && targetAudio.trim() !== "") {
+                    applyStaticAudioToPlayer(targetAudio);
                 } else if(hasDialogues) {
                     audioPlayer.classList.add('hidden');
-                    audioPlayer.src = "";
+                    audioPlayer.removeAttribute('src');
                     if(speechBtn) {
                         speechBtn.classList.remove('hidden');
-                        speechBtn.innerHTML = `<span>▶ Play Dialogue Audio (TTS)</span>`;
+                        updateAudioPlaysBadge(qKey);
                     }
                 } else {
                     audioPlayer.classList.add('hidden');
-                    audioPlayer.src = "";
+                    audioPlayer.removeAttribute('src');
                     if(speechBtn) speechBtn.classList.add('hidden');
                 }
             } else {
                 audioPlayer.pause();
-                audioPlayer.src = "";
+                audioPlayer.removeAttribute('src');
                 audioPlayer.onerror = null;
                 audioBox.classList.add('hidden');
             }
@@ -6416,13 +6599,16 @@
                 } else {
                     item.assignedMark = currentMark;
                     const isSelected = userAnswers[qKey] !== undefined ? userAnswers[qKey] : userAnswers[item.id];
+                    const hasAudioOrDialogue = !!(item._stitchedBlobUrl || item.audio || getQuestionDialogues(item));
+                    const needSynthModel = needsDialogueMasterSynthesis(item);
+                    const initialModelSrc = (!needSynthModel && (item._stitchedBlobUrl || item.audio)) ? resolveAudioUrl(item._stitchedBlobUrl || item.audio) : '';
                     container.innerHTML += `
                         <div class="p-5 glass-panel border-l-4 border-blue-500">
                             <div class="flex justify-between text-[10px] mb-3 font-bold text-blue-300">
                                 <span>Question ${qIdx++}</span>
                                 <span>${item.assignedMark} Pts</span>
                             </div>
-                            ${item.audio ? `<audio src="${item.audio}" controls class="w-full h-8 mb-3 opacity-80"></audio>` : ''}
+                            ${hasAudioOrDialogue ? `<audio id="model-audio-${index}" ${initialModelSrc ? `src="${initialModelSrc}"` : ''} controls class="w-full h-8 mb-3 opacity-80"></audio>` : ''}
                             <div class="flex justify-between gap-2">
                                 ${[1,2,3,4].map(n => `
                                     <button onclick="record('${qKey}', ${n}, this)" class="option-btn border border-white/20 p-2 flex-1 rounded-xl glass-input font-bold hover:bg-white/10 transition ${isSelected == n ? 'selected-ans' : ''}">
@@ -6432,6 +6618,12 @@
                             </div>
                         </div>
                     `;
+                    if(needSynthModel) {
+                        fetchMasterDialogueAudio(item, qKey).then(src => {
+                            const el = document.getElementById(`model-audio-${index}`);
+                            if(el && src) el.src = src;
+                        }).catch(() => {});
+                    }
                 }
             });
         }
