@@ -2016,25 +2016,22 @@
             return q._masterAudioPromise;
         }
 
-        function preCacheExamDialogueAudios(questions) {
+        function preCacheExamDialogueAudios(questions, startIdx = 0, maxCount = 2) {
             if(!Array.isArray(questions) || questions.length === 0) return;
-            const pendingQuestions = questions.filter(q => needsDialogueMasterSynthesis(q));
+            const safeStart = Math.max(0, startIdx);
+            const slice = questions.slice(safeStart);
+            const pendingQuestions = slice.filter(q => needsDialogueMasterSynthesis(q)).slice(0, maxCount);
             if(pendingQuestions.length === 0) return;
 
-            // Process up to 2 questions concurrently in the background so listening audio is ready immediately
-            let cursor = 0;
-            const workerCount = Math.min(2, pendingQuestions.length);
-            for(let w = 0; w < workerCount; w++) {
-                (async () => {
-                    while(cursor < pendingQuestions.length) {
-                        const myIdx = cursor++;
-                        const q = pendingQuestions[myIdx];
-                        try {
-                            await fetchMasterDialogueAudio(q, q.id || `pre_${myIdx}`);
-                        } catch(e) {}
-                    }
-                })();
-            }
+            // Process sequentially in the background so active question & page assets never stall
+            (async () => {
+                for(let i = 0; i < pendingQuestions.length; i++) {
+                    const q = pendingQuestions[i];
+                    try {
+                        await fetchMasterDialogueAudio(q, q.id || `pre_${safeStart + i}`);
+                    } catch(e) {}
+                }
+            })();
         }
 
         // --- PERSISTENT EXAM VISIBILITY ENGINE ---
@@ -5018,24 +5015,27 @@
                     }
 
                     fetchMasterDialogueAudio(q, qKey).then(synthesizedSrc => {
-                        if(cbtQuestions[cbtCurrentIdx] !== q) return;
-                        if(speechIndicator) speechIndicator.classList.add('hidden');
+                        if(cbtQuestions[cbtCurrentIdx] === q) {
+                            if(speechIndicator) speechIndicator.classList.add('hidden');
 
-                        if(synthesizedSrc) {
-                            if(speechBtn) speechBtn.classList.add('hidden');
-                            audioPlayer.classList.remove('hidden');
-                            audioPlayer.src = synthesizedSrc;
-                            bindCbtAudioPlayerHandlers(audioPlayer, qKey);
-                        } else if(!applyStaticAudioToPlayer(targetAudio)) {
-                            audioPlayer.classList.add('hidden');
-                            if(speechBtn) {
-                                speechBtn.classList.remove('hidden');
-                                updateAudioPlaysBadge(qKey);
+                            if(synthesizedSrc) {
+                                if(speechBtn) speechBtn.classList.add('hidden');
+                                audioPlayer.classList.remove('hidden');
+                                audioPlayer.src = synthesizedSrc;
+                                bindCbtAudioPlayerHandlers(audioPlayer, qKey);
+                            } else if(!applyStaticAudioToPlayer(targetAudio)) {
+                                audioPlayer.classList.add('hidden');
+                                if(speechBtn) {
+                                    speechBtn.classList.remove('hidden');
+                                    updateAudioPlaysBadge(qKey);
+                                }
                             }
                         }
+                        preCacheExamDialogueAudios(cbtQuestions, cbtCurrentIdx + 1, 2);
                     });
                 } else if(targetAudio && targetAudio.trim() !== "") {
                     applyStaticAudioToPlayer(targetAudio);
+                    setTimeout(() => preCacheExamDialogueAudios(cbtQuestions, cbtCurrentIdx + 1, 2), 250);
                 } else if(hasDialogues) {
                     audioPlayer.classList.add('hidden');
                     audioPlayer.removeAttribute('src');
