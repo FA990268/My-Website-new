@@ -6,6 +6,7 @@
     <title>JFT Exam System - CBT Simulation & Multi-Speaker TTS Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.min.js"></script>
     <style>
         :root {
             --glass-opacity: 0.12;
@@ -614,14 +615,14 @@
             <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">CANDIDATE REGISTRATION (পরীক্ষার্থী নিবন্ধন)</h2>
             <p class="text-xs text-gray-300 mb-4">JFT সার্টিফিকেট ও অনলাইন পরীক্ষার জন্য আপনার সঠিক তথ্য প্রদান করুন</p>
             <div id="login-pending-hint" class="hidden bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 p-3 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2"></div>
-            <div class="space-y-4">
+            <form id="candidate-reg-form" onsubmit="event.preventDefault(); goToPortalChoice();" class="space-y-4">
                 <div class="text-left">
                     <label class="text-[11px] font-bold text-gray-300 block mb-1">氏名 / Candidate Full Name <span class="text-rose-400">*</span></label>
-                    <input type="text" id="s-name" placeholder="Full Candidate Name (e.g. FATEMA ISLAM LIPY)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-3.5 rounded-xl text-sm font-bold">
+                    <input type="text" id="s-name" required placeholder="Full Candidate Name (e.g. FATEMA ISLAM LIPY)" class="glass-input w-full p-3.5 rounded-xl text-sm font-bold">
                 </div>
                 <div class="text-left">
                     <label class="text-[11px] font-bold text-gray-300 block mb-1">受験番号 / Registration No. <span class="text-rose-400">*</span></label>
-                    <input type="text" id="s-reg" placeholder="Registration Number (e.g. 40019402 or BD-2026-9081)" onkeydown="if(event.key==='Enter') goToPortalChoice();" class="glass-input w-full p-3.5 rounded-xl text-sm font-mono">
+                    <input type="text" id="s-reg" required placeholder="Registration Number (e.g. 40019402 or BD-2026-9081)" class="glass-input w-full p-3.5 rounded-xl text-sm font-mono">
                 </div>
                 <div class="grid grid-cols-2 gap-3 text-left">
                     <div>
@@ -650,13 +651,14 @@
                     <label class="text-[11px] font-bold text-gray-300 block mb-1">写真 / Candidate Photo (Optional, used on JFT Certificate):</label>
                     <input type="file" id="s-photo" accept="image/*" class="text-xs block w-full text-gray-400">
                 </div>
-                <button onclick="goToPortalChoice()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-2xl font-black text-base sm:text-lg transition shadow-lg shadow-blue-500/30">
+                <div id="candidate-reg-status" class="hidden text-xs font-semibold p-2.5 rounded-xl border text-left"></div>
+                <button id="btn-candidate-register" type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-2xl font-black text-base sm:text-lg transition shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed">
                     REGISTER &amp; START EXAM →
                 </button>
-                <button onclick="navigateTo('home')" class="w-full text-xs text-gray-400 hover:text-white py-2 transition font-bold">
+                <button type="button" onclick="navigateTo('home')" class="w-full text-xs text-gray-400 hover:text-white py-2 transition font-bold">
                     ← Back to Home Page
                 </button>
-            </div>
+            </form>
         </div>
     </section>
 
@@ -1404,7 +1406,7 @@
                     <!-- Photo -->
                     <div class="w-28 sm:w-32 flex-shrink-0 text-center">
                         <div class="w-28 h-36 sm:w-32 sm:h-40 border border-slate-300 bg-slate-50 overflow-hidden shadow-sm flex items-center justify-center rounded-sm">
-                            <img id="res-photo" src="assets/default_avatar.svg" alt="Candidate Photo" class="w-full h-full object-cover">
+                            <img id="res-photo" crossorigin="anonymous" src="assets/default_avatar.svg" alt="Candidate Photo" class="w-full h-full object-cover">
                         </div>
                     </div>
 
@@ -2317,10 +2319,21 @@
             url: 'https://xyxjoaluucliwwvprlvk.supabase.co',
             anonKey: 'sb_publishable_gwIiiDdSZAlxSX6XeZmM-g_5WMLqERh',
             tableName: localStorage.getItem('supabase_table_name') || 'JFT Mock Test',
+            candidateTable: 'candidate_registrations',
+            candidatePhotosBucket: 'candidate-photos',
             settingsTable: 'site_settings',
             carouselBucket: 'carousel-images',
             backgroundBucket: 'site-backgrounds'
         };
+
+        let _supabaseClientInstance = null;
+        function getSupabaseClient() {
+            if(_supabaseClientInstance) return _supabaseClientInstance;
+            if(window.supabase && typeof window.supabase.createClient === 'function') {
+                _supabaseClientInstance = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+            }
+            return _supabaseClientInstance;
+        }
 
         async function fetchMockTestsFromSupabase() {
             try {
@@ -3293,7 +3306,7 @@
                     setVal('s-loc', p.loc || 'Bangladesh');
                     setVal('s-nat', p.nat || 'Bangladesh');
                     setVal('s-sex', p.sex || 'Female');
-                    if(p.photo && p.photo.startsWith('data:image')) {
+                    if(p.photo && (p.photo.startsWith('data:image') || p.photo.startsWith('http://') || p.photo.startsWith('https://'))) {
                         const resPhoto = document.getElementById('res-photo');
                         if(resPhoto) resPhoto.src = p.photo;
                     }
@@ -3305,7 +3318,7 @@
             return null;
         }
 
-        function saveCandidateProfile() {
+        function saveCandidateProfile(overridePhotoUrl) {
             const name = (document.getElementById('s-name')?.value || "").trim();
             const reg = (document.getElementById('s-reg')?.value || "").trim();
             const dob = document.getElementById('s-dob')?.value || "2005-12-12";
@@ -3313,7 +3326,9 @@
             const nat = (document.getElementById('s-nat')?.value || "").trim() || "Bangladesh";
             const sex = document.getElementById('s-sex')?.value || "Female";
             const photoEl = document.getElementById('res-photo');
-            const photoData = (photoEl && photoEl.src && photoEl.src.startsWith('data:image')) ? photoEl.src : "";
+            const currentSrc = photoEl && photoEl.src ? photoEl.src : "";
+            const isPersistentImg = currentSrc.startsWith('data:image') || currentSrc.startsWith('http://') || currentSrc.startsWith('https://');
+            const photoData = overridePhotoUrl || (isPersistentImg ? currentSrc : "");
 
             if(!name || name.toLowerCase() === 'candidate') {
                 alert("দয়া করে JFT সার্টিফিকেটের জন্য আপনার পূর্ণ নাম (Candidate Full Name) প্রদান করুন।");
@@ -3331,7 +3346,100 @@
             const profile = { name, reg, dob, loc, nat, sex, photo: photoData };
             localStorage.setItem(CANDIDATE_PROFILE_KEY, JSON.stringify(profile));
             localStorage.setItem('jft_candidate_profile', JSON.stringify(profile));
-            return true;
+            return profile;
+        }
+
+        async function submitCandidateRegistrationToSupabase(profile) {
+            const sb = getSupabaseClient();
+            if(!sb) {
+                throw new Error("Supabase client library is not available. Please check your internet connection and reload.");
+            }
+
+            const photoInput = document.getElementById('s-photo');
+            const photoFile = photoInput?.files?.[0] || null;
+            let publicPhotoUrl = (profile.photo && (profile.photo.startsWith('http://') || profile.photo.startsWith('https://')))
+                ? profile.photo
+                : null;
+
+            if(photoFile) {
+                if(!photoFile.type || !photoFile.type.startsWith('image/')) {
+                    throw new Error("Please select a valid image file (JPEG, PNG, WEBP, or GIF) for Candidate Photo.");
+                }
+                if(photoFile.size > 5 * 1024 * 1024) {
+                    throw new Error("Candidate Photo must be 5 MB or smaller.");
+                }
+
+                const extMatch = (photoFile.name || '').match(/\.([a-zA-Z0-9]+)$/);
+                const ext = extMatch ? extMatch[1].toLowerCase() : (photoFile.type === 'image/png' ? 'png' : 'jpg');
+                const safeReg = (profile.reg || 'candidate').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const uniqueSuffix = (window.crypto && typeof window.crypto.randomUUID === 'function')
+                    ? window.crypto.randomUUID().slice(0, 8)
+                    : Math.random().toString(36).slice(2, 10);
+                const storagePath = `candidates/${safeReg}/${Date.now()}_${uniqueSuffix}.${ext}`;
+
+                const { data: uploadData, error: uploadError } = await sb.storage
+                    .from(SUPABASE_CONFIG.candidatePhotosBucket)
+                    .upload(storagePath, photoFile, {
+                        contentType: photoFile.type || 'image/jpeg',
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                if(uploadError) {
+                    throw new Error(`Supabase Storage upload failed: ${uploadError.message}`);
+                }
+
+                const { data: pubData } = sb.storage
+                    .from(SUPABASE_CONFIG.candidatePhotosBucket)
+                    .getPublicUrl(uploadData.path);
+                publicPhotoUrl = pubData?.publicUrl || null;
+
+                if(publicPhotoUrl) {
+                    const resPhoto = document.getElementById('res-photo');
+                    if(resPhoto) resPhoto.src = publicPhotoUrl;
+                    saveCandidateProfile(publicPhotoUrl);
+                }
+            }
+
+            const recordPayload = {
+                full_name: profile.name,
+                registration_no: profile.reg,
+                date_of_birth: profile.dob || '2005-12-12',
+                test_location: profile.loc || 'Bangladesh',
+                nationality: profile.nat || 'Bangladesh',
+                sex: profile.sex === 'Male' ? 'Male' : 'Female',
+                photo_url: publicPhotoUrl
+            };
+
+            const { error: insertError } = await sb
+                .from(SUPABASE_CONFIG.candidateTable)
+                .insert([recordPayload]);
+
+            if(insertError) {
+                throw new Error(`Supabase database insert failed: ${insertError.message}`);
+            }
+
+            return { publicPhotoUrl, recordPayload };
+        }
+
+        /** Sync certificate photo from saved public/profile URL or file input without overwriting uploaded HTTPS URLs. */
+        function syncCertificatePhotoPreview() {
+            const resPhoto = document.getElementById('res-photo');
+            if(!resPhoto) return;
+            const currentSrc = (resPhoto.getAttribute('src') || '').trim();
+            if(/^https?:\/\//i.test(currentSrc)) return;
+
+            const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
+            if(prof.photo && (/^https?:\/\//i.test(prof.photo) || prof.photo.startsWith('data:image/'))) {
+                resPhoto.src = prof.photo;
+                return;
+            }
+
+            const photo = document.getElementById('s-photo')?.files?.[0];
+            if(photo) {
+                const reader = new FileReader();
+                reader.onload = (e) => { resPhoto.src = e.target.result; };
+                reader.readAsDataURL(photo);
+            }
         }
 
         function hasValidCandidateProfile() {
@@ -3490,10 +3598,47 @@
         }
 
         // --- NAVIGATION FLOW ---
-        function goToPortalChoice() {
-            if(!saveCandidateProfile()) {
+        let _candidateSubmitting = false;
+        async function goToPortalChoice() {
+            if(_candidateSubmitting) return;
+            const profile = saveCandidateProfile();
+            if(!profile) {
                 return;
             }
+
+            const btn = document.getElementById('btn-candidate-register');
+            const statusEl = document.getElementById('candidate-reg-status');
+            _candidateSubmitting = true;
+            if(btn) {
+                btn.disabled = true;
+                btn.innerText = '⏳ Saving to Supabase...';
+            }
+            if(statusEl) {
+                statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 text-cyan-200 text-left';
+                statusEl.innerText = '⏳ Uploading photo (if selected) & saving registration...';
+                statusEl.classList.remove('hidden');
+            }
+
+            try {
+                await submitCandidateRegistrationToSupabase(profile);
+                if(statusEl) statusEl.classList.add('hidden');
+            } catch(err) {
+                console.error('Candidate Supabase registration error:', err);
+                if(statusEl) {
+                    statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 text-left';
+                    statusEl.innerText = `❌ ${err.message || 'Could not save registration to Supabase.'}`;
+                    statusEl.classList.remove('hidden');
+                }
+                alert(err.message || 'Could not save registration to Supabase.');
+                return;
+            } finally {
+                _candidateSubmitting = false;
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'REGISTER &amp; START EXAM →';
+                }
+            }
+
             document.getElementById('login-sec').classList.add('hidden');
             const hint = document.getElementById('login-pending-hint');
             if(hint) hint.classList.add('hidden');
@@ -4392,15 +4537,7 @@
             const examUi = document.getElementById('cbt-exam-ui');
             if(examUi) examUi.classList.remove('hidden');
 
-            const photo = document.getElementById('s-photo')?.files?.[0];
-            if(photo) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const resPhoto = document.getElementById('res-photo');
-                    if(resPhoto) resPhoto.src = e.target.result;
-                };
-                reader.readAsDataURL(photo);
-            }
+            syncCertificatePhotoPreview();
 
             cbtQuestions = activeCbtExam.questions || activeCbtExam.data?.questions || activeCbtExam.exam_data?.questions || activeCbtExam.examData || [];
             preCacheExamImages(cbtQuestions);
@@ -5436,10 +5573,16 @@
                 `;
             }
 
-            // Fallback for photo
+            // Restore candidate photo (Supabase public URL or cached data URI) or fallback
             const photoEl = document.getElementById('res-photo');
-            if(photoEl && (!photoEl.src || photoEl.src === window.location.href)) {
-                photoEl.src = "assets/default_avatar.svg";
+            if(photoEl) {
+                const curSrc = (photoEl.getAttribute('src') || '').trim();
+                if((!curSrc || curSrc === 'assets/default_avatar.svg') && prof.photo) {
+                    photoEl.src = prof.photo;
+                }
+                if(!photoEl.getAttribute('src') || photoEl.src === window.location.href) {
+                    photoEl.src = "assets/default_avatar.svg";
+                }
             }
         }
 
@@ -6570,15 +6713,7 @@
             const pdfFile = document.getElementById('pdf-input')?.files?.[0];
             if(pdfFile) document.getElementById('pdf-view').src = URL.createObjectURL(pdfFile);
             
-            const photo = document.getElementById('s-photo')?.files?.[0];
-            if(photo) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const resPhoto = document.getElementById('res-photo');
-                    if(resPhoto) resPhoto.src = e.target.result;
-                };
-                reader.readAsDataURL(photo);
-            }
+            syncCertificatePhotoPreview();
             renderQuestions();
             startTimer();
             saveModelSession();
