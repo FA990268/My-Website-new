@@ -32,9 +32,9 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         #admin-panel {
-            background: rgba(15, 23, 42, var(--glass-opacity, 0.15)) !important;
-            backdrop-filter: blur(var(--glass-blur, 18px));
-            -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
+            background: rgba(var(--glass-bg-tint), calc(var(--glass-opacity, 0.12) * 0.25)) !important;
+            backdrop-filter: blur(var(--glass-blur, 18px)) saturate(140%);
+            -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(140%);
             transition: background 0.15s ease-out;
         }
         .glass-panel {
@@ -65,11 +65,12 @@
             transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
         }
         #three-dot-menu {
-            background: rgba(15, 23, 42, 0.92) !important;
-            backdrop-filter: blur(22px);
-            -webkit-backdrop-filter: blur(22px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.65);
+            background: rgba(var(--glass-bg-tint), var(--glass-opacity, 0.12)) !important;
+            backdrop-filter: blur(calc(var(--glass-blur, 18px) + 4px)) saturate(160%);
+            -webkit-backdrop-filter: blur(calc(var(--glass-blur, 18px) + 4px)) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, var(--glass-border-opacity, 0.25));
+            box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
             transform-origin: top right;
             opacity: 0;
             transform: translateY(-10px) scale(0.96);
@@ -2604,6 +2605,7 @@
                 syncMockTestsFromSupabase().catch(e => console.warn("Supabase mock test sync note:", e))
             ]);
             try { renderHomeExams(); } catch(e) {}
+            try { dedupePdfModelExamsAgainstCbt(); renderAdminModelList(); } catch(e) {}
             try { renderStudentCbtList(); } catch(e) {}
 
             // Restore auto-download preference for Admin
@@ -2755,6 +2757,7 @@
                 });
             } catch(hErr) {}
 
+            try { dedupePdfModelExamsAgainstCbt(); renderAdminModelList(); } catch(e) {}
             try { renderStudentCbtList(); } catch(e) {}
             try { renderAdminCbtList(); } catch(e) {}
             try { renderHomeExams(); } catch(e) {}
@@ -2816,6 +2819,34 @@
             }
         }
 
+        function isManualPdfModelExam(entry) {
+            if(!entry || typeof entry !== 'object') return false;
+            if(entry.format === 'pdf_model') return true;
+            if(Array.isArray(entry.questions) && entry.questions.length > 0) return false;
+            const ed = entry.examData;
+            if(Array.isArray(ed) && ed.length > 0 && ed.some(item => item && (item.type === 's' || item.type === 'q' || item.fixedMark !== undefined))) {
+                return true;
+            }
+            return false;
+        }
+
+        function dedupePdfModelExamsAgainstCbt() {
+            const cbtIds = new Set((allCbtExams || []).map(x => String(x.id || '')).filter(Boolean));
+            const cbtTitles = new Set((allCbtExams || []).map(x => String(x.title || '').trim()).filter(Boolean));
+            const beforeLen = (allExams || []).length;
+            allExams = (allExams || []).filter(ex => {
+                if(!ex) return false;
+                const exId = String(ex.id || '');
+                const exTitle = String(ex.modelName || ex.title || ex.name || '').trim();
+                if(cbtIds.has(exId) || cbtTitles.has(exTitle)) return false;
+                if(ex.source === 'supabase' && !isManualPdfModelExam(ex)) return false;
+                return true;
+            });
+            if(allExams.length !== beforeLen) {
+                try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
+            }
+        }
+
         async function syncMockTestsFromSupabase(showAlert = false) {
             const btn = document.getElementById('btn-sync-supabase');
             if(btn && showAlert) {
@@ -2868,11 +2899,16 @@
                     }
                     const finalActive = isExplicitlyHidden ? false : (parsed.isActive !== false);
 
-                    // 1. If row contains structured questions (Prometric CBT style)
-                    const qs = parsed.questions || (Array.isArray(parsed.examData) ? parsed.examData : null);
-                    if(qs && qs.length > 0 && (parsed.duration || parsed.passMark || qs[0]?.section || qs[0]?.options)) {
+                    // Distinguish genuine manual PDF Model Tests vs CBT exams so CBT tests are NEVER duplicated as PDF Model Tests
+                    const isExplicitPdfModel = isManualPdfModelExam(parsed);
+                    const qs = Array.isArray(parsed.questions) && parsed.questions.length > 0
+                        ? parsed.questions
+                        : (!isExplicitPdfModel && Array.isArray(parsed.examData) && parsed.examData.length > 0 ? parsed.examData : null);
+
+                    if(!isExplicitPdfModel && (qs || parsed.duration || parsed.passMark || row.title)) {
+                        const normalizedQs = Array.isArray(qs) ? qs : [];
                         // Normalize dialogue structures bi-directionally
-                        qs.forEach((q, qIdx) => {
+                        normalizedQs.forEach((q, qIdx) => {
                             if(!q.dialogues) {
                                 q.dialogues = q.dialog || q.dialogue || q.script || q.scripts || q.conversation || q.conversations || q.turns || null;
                             }
@@ -2893,13 +2929,13 @@
                             }
                         });
 
-                        const cbtIdx = allCbtExams.findIndex(x => x.id === rowId || x.title === title);
+                        const cbtIdx = allCbtExams.findIndex(x => String(x.id) === rowId || x.title === title);
                         const cbtModel = {
                             id: rowId,
                             title: title,
                             duration: parsed.duration || 60,
                             passMark: parsed.passMark || 200,
-                            questions: qs,
+                            questions: normalizedQs,
                             isActive: finalActive,
                             source: 'supabase'
                         };
@@ -2909,39 +2945,42 @@
                             allCbtExams.unshift(cbtModel);
                         }
                         cbtsUpdated++;
+                    } else if(isExplicitPdfModel) {
+                        // Only explicit PDF Model Builder exams belong in allExams (PDF Model Tests)
+                        const exIdx = allExams.findIndex(x => (x.id && String(x.id) === rowId) || (x.modelName && x.modelName === title) || (x.title && x.title === title));
+                        const modelEntry = {
+                            id: rowId,
+                            modelName: title,
+                            title: title,
+                            group: parsed.group || 'GENERAL',
+                            passMark: parsed.passMark || 200,
+                            duration: parsed.duration || 60,
+                            examData: parsed.examData || parsed.items || [],
+                            format: 'pdf_model',
+                            isActive: finalActive,
+                            source: 'supabase'
+                        };
+                        if(exIdx !== -1) {
+                            allExams[exIdx] = { ...allExams[exIdx], ...modelEntry };
+                        } else {
+                            allExams.unshift(modelEntry);
+                        }
+                        modelsUpdated++;
                     }
-
-                    // 2. Also make available in Model Tests (allExams)
-                    const exIdx = allExams.findIndex(x => (x.id && x.id === rowId) || (x.modelName && x.modelName === title) || (x.title && x.title === title));
-                    const modelEntry = {
-                        id: rowId,
-                        modelName: title,
-                        title: title,
-                        group: parsed.group || 'GENERAL',
-                        passMark: parsed.passMark || 200,
-                        duration: parsed.duration || 60,
-                        examData: qs || parsed.items || [],
-                        isActive: finalActive,
-                        source: 'supabase'
-                    };
-                    if(exIdx !== -1) {
-                        allExams[exIdx] = { ...allExams[exIdx], ...modelEntry };
-                    } else {
-                        allExams.unshift(modelEntry);
-                    }
-                    modelsUpdated++;
                 });
 
+                dedupePdfModelExamsAgainstCbt();
                 try { localStorage.setItem('jft_exam_db', JSON.stringify(allExams)); } catch(e) {}
                 try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
                 try { renderAdminModelList(); } catch(e) {}
                 try { renderAdminCbtList(); } catch(e) {}
                 try { renderHomeExams(); } catch(e) {}
-                try { renderStudentCbtList(); } catch(e) {}
+                try { dedupePdfModelExamsAgainstCbt(); renderAdminModelList(); } catch(e) {}
+            try { renderStudentCbtList(); } catch(e) {}
                 try { if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all'); } catch(e) {}
 
                 if(showAlert) {
-                    alert(`✓ Synced from Supabase table "${SUPABASE_CONFIG.tableName}"!\n\n📋 Total Rows Processed: ${rows.length}\n🖥️ CBT Exams: ${cbtsUpdated}\n📄 Model Tests: ${modelsUpdated}`);
+                    alert(`✓ Synced from Supabase table "${SUPABASE_CONFIG.tableName}"!\n\n📋 Total Rows Processed: ${rows.length}\n🖥️ CBT Exams: ${cbtsUpdated}\n📄 PDF Model Tests: ${modelsUpdated}`);
                 }
             } catch(err) {
                 console.error("Supabase sync failed:", err);
@@ -3606,7 +3645,9 @@
             if(filter === 'all' || filter === 'cbt') {
                 const visibleCbt = allCbtExams.filter(e => e.isActive !== false);
                 visibleCbt.forEach(exam => {
-                    const qCount = (exam.data && exam.data.questions) ? exam.data.questions.length : 40;
+                    const qCount = (exam.data && exam.data.questions) ? exam.data.questions.length : (exam.questions ? exam.questions.length : 40);
+                    const dur = exam.duration || exam.data?.duration || 60;
+                    const pass = exam.passMark || exam.data?.passMark || 200;
                     cardsHtml += `
                         <div class="glass-card p-6 border-2 border-cyan-500/30 flex flex-col justify-between relative overflow-hidden group">
                             <div class="absolute -right-12 -top-12 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
@@ -3615,7 +3656,7 @@
                                     <span class="bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">
                                         🖥️ Official Prometric CBT
                                     </span>
-                                    <span class="text-[11px] text-gray-400 font-mono">${exam.data?.duration || 60}m</span>
+                                    <span class="text-[11px] text-gray-400 font-mono">${dur}m</span>
                                 </div>
                                 <h3 class="text-base font-bold text-white mb-2 leading-snug group-hover:text-cyan-300 transition">
                                     ${exam.title}
@@ -3625,7 +3666,7 @@
                                 </p>
                                 <div class="grid grid-cols-2 gap-2 text-[11px] bg-black/30 p-3 rounded-xl border border-white/10 mb-4">
                                     <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Questions</span><b>${qCount} Items</b></div>
-                                    <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${exam.data?.passMark || 200}/250</b></div>
+                                    <div class="text-gray-300"><span class="text-gray-500 block text-[9px] uppercase">Pass Score</span><b class="text-emerald-400">${pass}/250</b></div>
                                 </div>
                             </div>
                             <div class="mt-auto">
@@ -4845,9 +4886,9 @@
         }
 
         function processUnifiedCbtData(raw, sourceName, isUserUpload = false) {
-            // Check if uploaded JSON is a PDF Model Test structure
-            if(raw && (raw.examData || (raw.modelName && !raw.questions))) {
-                const mName = raw.modelName || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : `Model Test #${allExams.length + 1}`);
+            // Only treat as PDF Model Test if it explicitly uses PDF Model Builder items ({type:'s'|'q'}) without CBT questions
+            if(isManualPdfModelExam(raw)) {
+                const mName = raw.modelName || raw.title || (sourceName ? sourceName.replace(/\.[^/.]+$/, '') : `Model Test #${allExams.length + 1}`);
                 const mGroup = raw.group || 'GENERAL';
                 const mPass = raw.passMark || 200;
                 const mDur = raw.duration || 60;
@@ -4857,6 +4898,7 @@
                     passMark: mPass,
                     duration: mDur,
                     examData: raw.examData || [],
+                    format: 'pdf_model',
                     isActive: true
                 };
 
@@ -4879,8 +4921,13 @@
                 // Automatically save & sync to Supabase table
                 saveExamToSupabase(newModel);
 
-                if(isUserUpload) alert(`✓ Model Test "${mName}" uploaded and synced to Supabase!`);
+                if(isUserUpload) alert(`✓ PDF Model Test "${mName}" uploaded and synced to Supabase!`);
                 return;
+            }
+
+            // Normalize JSON files that put CBT questions under `examData` instead of `questions`
+            if(raw && !Array.isArray(raw) && !raw.questions && Array.isArray(raw.examData)) {
+                raw = { ...raw, title: raw.title || raw.modelName, questions: raw.examData };
             }
 
             previewUnifiedCbtStudio(raw, sourceName);
@@ -7026,8 +7073,10 @@
             } else {
                 allCbtExams.unshift(newExam);
             }
+            dedupePdfModelExamsAgainstCbt();
             try { localStorage.setItem('jft_cbt_db', JSON.stringify(allCbtExams)); } catch(e) {}
             renderAdminCbtList();
+            renderAdminModelList();
             renderHomeExams();
             if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all');
             renderStudentCbtList();
@@ -7551,6 +7600,7 @@
                 passMark: document.getElementById('pass-mark').value, 
                 duration: document.getElementById('exam-duration').value, 
                 examData: examData,
+                format: 'pdf_model',
                 isActive: true
             };
 
