@@ -2975,8 +2975,7 @@
                 try { renderAdminModelList(); } catch(e) {}
                 try { renderAdminCbtList(); } catch(e) {}
                 try { renderHomeExams(); } catch(e) {}
-                try { dedupePdfModelExamsAgainstCbt(); renderAdminModelList(); } catch(e) {}
-            try { renderStudentCbtList(); } catch(e) {}
+                try { renderStudentCbtList(); } catch(e) {}
                 try { if(typeof renderMockTestsView === 'function') renderMockTestsView(currentMockFilter || 'all'); } catch(e) {}
 
                 if(showAlert) {
