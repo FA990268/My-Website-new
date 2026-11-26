@@ -64,6 +64,42 @@
         #capsule-nav-glider {
             transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
         }
+        #three-dot-menu {
+            background: rgba(15, 23, 42, 0.92) !important;
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.65);
+            transform-origin: top right;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.96);
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+        }
+        #three-dot-menu.is-open {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .mobile-nav-pill {
+            border-radius: 9999px;
+            border: 1px solid transparent;
+            color: #cbd5e1;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .mobile-nav-pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        .mobile-nav-pill.active {
+            background: linear-gradient(to right, #2563eb, #06b6d4);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #ffffff !important;
+            box-shadow: 0 8px 20px -4px rgba(6, 182, 212, 0.35);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+        }
         .glass-capsule {
             border-radius: 9999px;
             backdrop-filter: blur(var(--glass-blur));
@@ -159,20 +195,20 @@
     </div>
     <!-- TOP FLOATING CAPSULE NAVIGATION BAR -->
     <header id="top-nav-bar" class="fixed top-3 left-0 right-0 z-50 px-3 sm:px-6 md:px-8 flex justify-center pointer-events-none transition-all duration-300 w-full">
-        <div class="pointer-events-auto max-w-[1600px] w-full glass-panel px-4 sm:px-8 py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-2xl border border-white/20 rounded-2xl sm:rounded-full">
+        <div class="pointer-events-auto max-w-[1600px] w-full glass-panel px-4 sm:px-8 py-2.5 flex items-center justify-between gap-2 shadow-2xl backdrop-blur-2xl border border-white/20 rounded-2xl sm:rounded-full">
             <!-- Brand / Logo -->
-            <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none" onclick="navigateTo('home')">
+            <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none min-w-0" onclick="navigateTo('home')">
                 <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-rose-600 via-pink-600 to-amber-400 flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md border border-white/40 flex-shrink-0">
                     第一
                 </div>
-                <div class="leading-tight">
-                    <span class="font-black text-xs sm:text-sm tracking-wide text-white block">DAI ICHI ACADEMY</span>
-                    <span class="text-[9px] text-amber-300 font-semibold tracking-wider block uppercase truncate max-w-[170px] sm:max-w-none">KHULNA • JAPANESE &amp; VISA</span>
+                <div class="leading-tight min-w-0">
+                    <span class="font-black text-xs sm:text-sm tracking-wide text-white block truncate">DAI ICHI ACADEMY</span>
+                    <span class="text-[9px] text-amber-300 font-semibold tracking-wider block uppercase truncate">KHULNA • JAPANESE &amp; VISA</span>
                 </div>
             </div>
 
-            <!-- Capsule Nav Links with Smooth Sliding Active Indicator Glider -->
-            <nav id="capsule-nav-container" class="relative flex items-center gap-1 sm:gap-2 bg-white/5 p-1 rounded-full border border-white/10 backdrop-blur-md">
+            <!-- Capsule Nav Links with Smooth Sliding Active Indicator Glider (Desktop Only >= 768px) -->
+            <nav id="capsule-nav-container" class="hidden md:flex relative items-center gap-1 sm:gap-2 bg-white/5 p-1 rounded-full border border-white/10 backdrop-blur-md">
                 <div id="capsule-nav-glider" class="absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 border border-white/40 shadow-lg shadow-cyan-500/25 pointer-events-none opacity-0"></div>
                 <button onclick="navigateTo('home')" data-view="home" class="nav-capsule-btn active relative z-10 px-3.5 sm:px-5 py-1.5 rounded-full text-xs font-bold transition-colors text-white">
                     Home
@@ -188,56 +224,83 @@
                 </button>
             </nav>
 
-            <!-- Right Controls: Login & Sliding Menu Trigger (LAN IP removed from title bar) -->
-            <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Right Controls: Login (Desktop) & Responsive Hamburger / Three-Dot Menu Trigger -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <button onclick="navigateTo('login')" class="hidden md:inline-flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition border border-blue-400/40 shadow-sm">
                     <span>🎓</span>
                     <span>Student Login</span>
                 </button>
-                <!-- Three-Dot Sliding Drawer Trigger -->
-                <button id="three-dot-btn" onclick="toggleThreeDotMenu(event)" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center text-white text-base sm:text-lg font-black transition active:scale-95" title="Menu & Admin">
-                    ⋮
+                <!-- Mobile Hamburger (☰) / Desktop Three-Dot (⋮) Drawer Trigger -->
+                <button id="three-dot-btn" type="button" onclick="toggleThreeDotMenu(event)" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="three-dot-menu" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center text-white text-base sm:text-lg font-black transition active:scale-95 flex-shrink-0" title="Menu & Admin">
+                    <span id="menu-icon-mobile" class="md:hidden text-lg leading-none">☰</span>
+                    <span class="hidden md:inline leading-none">⋮</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- SLIDING & AUTO-COLLAPSING THREE-DOT DRAWER -->
-    <div id="three-dot-menu" class="hidden fixed top-20 right-4 sm:right-8 z-50 w-72 glass-panel p-3 border border-white/20 rounded-2xl shadow-2xl backdrop-blur-3xl animate-in fade-in slide-in-from-top-2 duration-200">
-        <div class="px-3 py-2 border-b border-white/10 flex justify-between items-center mb-1">
-            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Quick Navigation</span>
+    <!-- COLLAPSIBLE MOBILE NAVIGATION & THREE-DOT DRAWER -->
+    <div id="three-dot-menu" aria-hidden="true" class="fixed top-[4.5rem] sm:top-20 right-3 sm:right-8 z-50 w-[calc(100vw-1.5rem)] max-w-xs sm:w-72 max-h-[calc(100dvh-5.5rem)] overflow-y-auto p-3.5 rounded-2xl">
+        <div class="px-3 py-2 border-b border-white/10 flex justify-between items-center mb-2">
+            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider md:hidden">Navigation</span>
+            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider hidden md:inline">Quick Navigation</span>
             <span class="text-[10px] text-emerald-400 font-mono flex items-center gap-1">● Active</span>
         </div>
+
+        <!-- Mobile Vertical Nav Pills (< 768px) -->
+        <nav aria-label="Mobile Navigation" class="md:hidden flex flex-col gap-1.5 pb-3 mb-2.5 border-b border-white/10">
+            <button type="button" onclick="navigateTo('home')" data-mobile-view="home" class="mobile-nav-pill active w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">🏠</span>
+                <span>Home</span>
+            </button>
+            <button type="button" onclick="navigateTo('mock')" data-mobile-view="mock" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">📝</span>
+                <span>Mock Test</span>
+            </button>
+            <button type="button" onclick="navigateTo('courses')" data-mobile-view="courses" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">📚</span>
+                <span>Courses</span>
+            </button>
+            <button type="button" onclick="navigateTo('about')" data-mobile-view="about" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">ℹ️</span>
+                <span>About Us</span>
+            </button>
+            <button type="button" onclick="navigateTo('login')" data-mobile-view="login" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">🎓</span>
+                <span>Student Login</span>
+            </button>
+        </nav>
+
         <div class="space-y-1">
-            <button onclick="navigateTo('login')" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white flex items-center gap-3 transition">
+            <button type="button" onclick="navigateTo('login')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white items-center gap-3 transition">
                 <span class="text-base">🎓</span>
                 <div>
                     <div>Student Registration / Login</div>
                     <div class="text-[10px] text-gray-400 font-normal">Candidate login & exam profile</div>
                 </div>
             </button>
-            <button onclick="navigateTo('mock')" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-cyan-300 flex items-center gap-3 transition">
+            <button type="button" onclick="navigateTo('mock')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-cyan-300 items-center gap-3 transition">
                 <span class="text-base">📝</span>
                 <div>
                     <div>Browse All Mock Tests</div>
                     <div class="text-[10px] text-gray-400 font-normal">CBT Prometric & PDF Model Tests</div>
                 </div>
             </button>
-            <button onclick="openAdmin(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-amber-300 flex items-center gap-3 transition">
+            <button type="button" onclick="openAdmin(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-amber-300 flex items-center gap-3 transition">
                 <span class="text-base">⚙️</span>
                 <div>
                     <div>Admin Control Panel</div>
                     <div class="text-[10px] text-gray-400 font-normal">Exam creator, TTS studio & results</div>
                 </div>
             </button>
-            <button onclick="copyLanUrl(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white flex items-center gap-3 transition">
+            <button type="button" onclick="copyLanUrl(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white flex items-center gap-3 transition">
                 <span class="text-base">📋</span>
                 <div>
                     <div>Copy LAN Exam Link</div>
                     <div class="text-[10px] text-gray-400 font-normal">Share with other phones & laptops</div>
                 </div>
             </button>
-            <button onclick="showNetworkModal(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white flex items-center gap-3 transition">
+            <button type="button" onclick="showNetworkModal(); closeThreeDotMenu();" class="w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white flex items-center gap-3 transition">
                 <span class="text-base">📱</span>
                 <div>
                     <div>Multi-User LAN Info</div>
@@ -2185,9 +2248,12 @@
             window.addEventListener('resize', () => {
                 const activeBtn = document.querySelector('.nav-capsule-btn.active');
                 const glider = document.getElementById('capsule-nav-glider');
-                if(activeBtn && glider) {
+                if(activeBtn && glider && activeBtn.offsetWidth > 0) {
+                    glider.style.opacity = '1';
                     glider.style.left = activeBtn.offsetLeft + 'px';
                     glider.style.width = activeBtn.offsetWidth + 'px';
+                } else if(glider) {
+                    glider.style.opacity = '0';
                 }
             });
             window.addEventListener('pagehide', () => {
@@ -2775,10 +2841,20 @@
                 }
             });
 
+            // Update mobile drawer pill active classes
+            const mobileViewKey = (viewName === 'register') ? 'login' : viewName;
+            document.querySelectorAll('.mobile-nav-pill').forEach(btn => {
+                if(btn.dataset.mobileView === mobileViewKey) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
             // Update sliding glider indicator
             const activeBtn = document.querySelector(`.nav-capsule-btn[data-view="${viewName}"]`);
             const glider = document.getElementById('capsule-nav-glider');
-            if(activeBtn && glider) {
+            if(activeBtn && glider && activeBtn.offsetWidth > 0) {
                 glider.style.opacity = '1';
                 glider.style.left = activeBtn.offsetLeft + 'px';
                 glider.style.width = activeBtn.offsetWidth + 'px';
@@ -2821,23 +2897,40 @@
             document.body.scrollTop = 0;
         }
 
-        // --- THREE-DOT SLIDING MENU (AUTO-COLLAPSING) ---
+        // --- THREE-DOT & MOBILE COLLAPSIBLE MENU (AUTO-COLLAPSING) ---
+        function openThreeDotMenu() {
+            const menu = document.getElementById('three-dot-menu');
+            const btn = document.getElementById('three-dot-btn');
+            const mobIcon = document.getElementById('menu-icon-mobile');
+            if(!menu) return;
+            menu.classList.add('is-open');
+            menu.setAttribute('aria-hidden', 'false');
+            if(btn) btn.setAttribute('aria-expanded', 'true');
+            if(mobIcon) mobIcon.textContent = '✕';
+            resetThreeDotIdleTimer();
+        }
+
         function toggleThreeDotMenu(e) {
             if(e) e.stopPropagation();
             const menu = document.getElementById('three-dot-menu');
             if(!menu) return;
-            const isHidden = menu.classList.contains('hidden');
-            if(isHidden) {
-                menu.classList.remove('hidden');
-                resetThreeDotIdleTimer();
-            } else {
+            if(menu.classList.contains('is-open')) {
                 closeThreeDotMenu();
+            } else {
+                openThreeDotMenu();
             }
         }
 
         function closeThreeDotMenu() {
             const menu = document.getElementById('three-dot-menu');
-            if(menu) menu.classList.add('hidden');
+            const btn = document.getElementById('three-dot-btn');
+            const mobIcon = document.getElementById('menu-icon-mobile');
+            if(menu) {
+                menu.classList.remove('is-open');
+                menu.setAttribute('aria-hidden', 'true');
+            }
+            if(btn) btn.setAttribute('aria-expanded', 'false');
+            if(mobIcon) mobIcon.textContent = '☰';
             if(threeDotIdleTimer) {
                 clearTimeout(threeDotIdleTimer);
                 threeDotIdleTimer = null;
@@ -2852,18 +2945,24 @@
         }
 
         function initThreeDotCollapseListener() {
-            document.addEventListener('click', (e) => {
+            const handleOutsideTap = (e) => {
                 const menu = document.getElementById('three-dot-menu');
                 const btn = document.getElementById('three-dot-btn');
-                if(!menu || menu.classList.contains('hidden')) return;
-                if(!menu.contains(e.target) && !btn.contains(e.target)) {
+                if(!menu || !menu.classList.contains('is-open')) return;
+                if(!menu.contains(e.target) && !(btn && btn.contains(e.target))) {
                     closeThreeDotMenu();
                 }
+            };
+            document.addEventListener('click', handleOutsideTap);
+            document.addEventListener('touchstart', handleOutsideTap, { passive: true });
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'Escape') closeThreeDotMenu();
             });
             const menu = document.getElementById('three-dot-menu');
             if(menu) {
                 menu.addEventListener('mouseenter', resetThreeDotIdleTimer);
                 menu.addEventListener('mousemove', resetThreeDotIdleTimer);
+                menu.addEventListener('touchstart', resetThreeDotIdleTimer, { passive: true });
             }
         }
 
