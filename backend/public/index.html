@@ -2482,7 +2482,23 @@
         let cbtFlags = {};
         let cbtAudioPlays = {};
         let cbtTimerInterval = null;
+        let modelTimerInterval = null;
         let time = 3600;
+
+        /** Stop active CBT and model exam timers cleanly without referencing undeclared globals. */
+        function stopAllExamTimers() {
+            if(cbtTimerInterval) {
+                clearInterval(cbtTimerInterval);
+                cbtTimerInterval = null;
+            }
+            if(modelTimerInterval) {
+                clearInterval(modelTimerInterval);
+                modelTimerInterval = null;
+            }
+            if(typeof stopCbtDialogueSpeech === 'function') {
+                stopCbtDialogueSpeech();
+            }
+        }
 
         // Dialogue Script & TTS State
         let parsedScripts = [];
@@ -2504,6 +2520,11 @@
         const MODEL_SESSION_KEY = 'jft_model_active_session_v1';
 
         async function initSystem() {
+            try {
+                if(localStorage.getItem(STUDENT_LAST_VIEW_KEY) === 'profile' && localStorage.getItem(STUDENT_AUTH_KEY)) {
+                    document.getElementById('view-home')?.classList.add('hidden');
+                }
+            } catch(e) {}
             if(window.location.protocol === 'file:') {
                 const warn = document.getElementById('file-protocol-warning');
                 if(warn) warn.classList.remove('hidden');
@@ -2546,15 +2567,8 @@
                 });
             }
             try { await restoreStudentSessionOnBoot(); } catch(e) { console.warn("Session restore note:", e); }
-            try { await fetchSiteSettingsFromSupabase(); } catch(e) { console.warn("Supabase site settings load note:", e); }
-            try { await fetchNetworkInfo(); } catch(e) { console.warn("Network info fetch warning:", e); }
-            try { await fetchVoices(); } catch(e) { console.warn("Voice catalog fetch warning:", e); }
-            try { await loadCbtExams(); } catch(e) { console.warn("CBT exam load warning:", e); }
-            try { await syncMockTestsFromSupabase(); } catch(e) { console.warn("Supabase mock test sync note:", e); }
-            try { renderHomeExams(); } catch(e) {}
-            try { renderStudentCbtList(); } catch(e) {}
 
-            // Auto-restore active exam session ONLY if authenticated student session is active
+            // Immediately restore active exam or last view once auth state resolves (before network catalog syncs)
             let cbtRestored = false;
             let modelRestored = false;
             if(hasValidStudentSession()) {
@@ -2580,6 +2594,17 @@
             }
             initHomeSlider();
             initThreeDotCollapseListener();
+
+            // Load remote catalogs and settings in parallel without blocking session restoration
+            await Promise.allSettled([
+                fetchSiteSettingsFromSupabase().catch(e => console.warn("Supabase site settings load note:", e)),
+                fetchNetworkInfo().catch(e => console.warn("Network info fetch warning:", e)),
+                fetchVoices().catch(e => console.warn("Voice catalog fetch warning:", e)),
+                loadCbtExams().catch(e => console.warn("CBT exam load warning:", e)),
+                syncMockTestsFromSupabase().catch(e => console.warn("Supabase mock test sync note:", e))
+            ]);
+            try { renderHomeExams(); } catch(e) {}
+            try { renderStudentCbtList(); } catch(e) {}
 
             // Restore auto-download preference for Admin
             const autoDlSaved = localStorage.getItem('admin_auto_download') === 'true';
@@ -4144,9 +4169,7 @@
             })();
 
             // Stop active exam timers/audio cleanly if logging out mid-exam
-            if(cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
-            if(typeof timerInterval !== 'undefined' && timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
+            stopAllExamTimers();
 
             try {
                 const sb = getSupabaseClient();
@@ -7289,15 +7312,7 @@
 
             clearCbtSession();
             clearModelSession();
-
-            if(cbtTimerInterval) {
-                clearInterval(cbtTimerInterval);
-                cbtTimerInterval = null;
-            }
-            if(timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
+            stopAllExamTimers();
 
             activeCbtExam = null;
             cbtQuestions = [];
@@ -7321,16 +7336,7 @@
             // Clear any lingering session keys
             clearCbtSession();
             clearModelSession();
-
-            // Stop any active timer
-            if(cbtTimerInterval) {
-                clearInterval(cbtTimerInterval);
-                cbtTimerInterval = null;
-            }
-            if(timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
+            stopAllExamTimers();
 
             // Reset active exam state variables
             activeCbtExam = null;
@@ -7366,15 +7372,7 @@
 
             clearCbtSession();
             clearModelSession();
-
-            if(cbtTimerInterval) {
-                clearInterval(cbtTimerInterval);
-                cbtTimerInterval = null;
-            }
-            if(timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
+            stopAllExamTimers();
 
             activeCbtExam = null;
             cbtQuestions = [];
@@ -7816,8 +7814,12 @@
         }
 
         function startTimer() {
-            const timerInt = setInterval(() => {
-                if(time <= 0) { clearInterval(timerInt); finishExam(); return; }
+            if(modelTimerInterval) {
+                clearInterval(modelTimerInterval);
+                modelTimerInterval = null;
+            }
+            modelTimerInterval = setInterval(() => {
+                if(time <= 0) { clearInterval(modelTimerInterval); modelTimerInterval = null; finishExam(); return; }
                 let m = Math.floor(time/60), s = time%60;
                 document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
                 time--;
@@ -7826,6 +7828,7 @@
         }
 
         async function finishExam() {
+            stopAllExamTimers();
             clearModelSession();
             let grandTotal = 0, userScore = 0;
             let totalCorrect = 0, totalQuestions = 0;
