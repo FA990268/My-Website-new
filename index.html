@@ -178,6 +178,147 @@
         .cbt-option-box.selected .cbt-option-radio { background: #0055a5; color: white; border-color: #0055a5; }
         .cbt-footer { background: #003366; color: white; border-top: 2px solid #002244; }
 
+        /* Mobile Viewport & Zero-Scroll Exam Layout (<= 768px) */
+        @media (max-width: 768px) {
+            #cbt-exam-ui,
+            #exam-ui {
+                height: 100dvh;
+                min-height: 0 !important;
+                max-height: 100dvh;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            #cbt-exam-ui .cbt-header {
+                padding: 5px 10px !important;
+                border-bottom-width: 2px;
+                flex-shrink: 0;
+            }
+            #cbt-header-title {
+                font-size: 13px !important;
+                line-height: 1.15 !important;
+            }
+            #cbt-timer {
+                font-size: 15px !important;
+                line-height: 1.1 !important;
+            }
+            #cbt-exam-ui .cbt-subbar {
+                padding: 0 6px !important;
+                flex-shrink: 0;
+            }
+            .cbt-sec-tab {
+                padding: 5px 9px !important;
+                font-size: 11px !important;
+            }
+            #cbt-main-scroll {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #cbt-left-pane {
+                padding: 7px 10px !important;
+                overflow: visible !important;
+                max-height: none !important;
+            }
+            #cbt-left-pane > div:first-child {
+                margin-bottom: 5px !important;
+                padding-bottom: 4px !important;
+            }
+            #cbt-sec-badge {
+                font-size: 10px !important;
+                padding: 2px 7px !important;
+            }
+            #cbt-q-counter {
+                font-size: 11px !important;
+            }
+            #cbt-instruction-box {
+                padding: 5px 8px !important;
+                margin-bottom: 0 !important;
+                font-size: 11px !important;
+                line-height: 1.3 !important;
+                border-left-width: 3px !important;
+            }
+            #cbt-passage-box {
+                padding: 7px 9px !important;
+                margin-top: 6px !important;
+                margin-bottom: 2px !important;
+                font-size: 12px !important;
+                line-height: 1.38 !important;
+                max-height: 22dvh;
+                overflow-y: auto;
+            }
+            #cbt-image-box {
+                margin-top: 6px !important;
+                margin-bottom: 2px !important;
+            }
+            #cbt-q-image {
+                max-height: 118px !important;
+                padding: 3px !important;
+            }
+            #cbt-audio-box {
+                padding: 6px 8px !important;
+                margin-top: 6px !important;
+                margin-bottom: 2px !important;
+            }
+            #cbt-audio-box > div:first-child {
+                margin-bottom: 4px !important;
+            }
+            #cbt-audio-player {
+                height: 30px !important;
+            }
+            #cbt-right-pane {
+                padding: 7px 10px 10px 10px !important;
+                overflow: visible !important;
+                flex: 0 0 auto !important;
+                justify-content: flex-start !important;
+            }
+            #cbt-right-pane-label-q {
+                font-size: 9px !important;
+                margin-bottom: 2px !important;
+            }
+            #cbt-question-text {
+                font-size: 14px !important;
+                line-height: 1.35 !important;
+                margin-bottom: 8px !important;
+                padding-bottom: 6px !important;
+            }
+            #cbt-right-pane-label-opts {
+                font-size: 9px !important;
+                margin-bottom: 4px !important;
+            }
+            #cbt-options-container {
+                display: flex;
+                flex-direction: column;
+                gap: 6px !important;
+            }
+            #cbt-options-container > * + * {
+                margin-top: 0 !important;
+            }
+            .cbt-option-box {
+                padding: 7px 10px !important;
+                gap: 9px !important;
+                font-size: 13.5px !important;
+                line-height: 1.25 !important;
+                border-radius: 7px !important;
+                border-width: 1.5px !important;
+            }
+            .cbt-option-radio {
+                width: 22px !important;
+                height: 22px !important;
+                font-size: 11px !important;
+            }
+            #cbt-exam-footer {
+                padding: 6px 10px max(7px, env(safe-area-inset-bottom)) 10px !important;
+                flex-shrink: 0 !important;
+            }
+            #cbt-prev-btn,
+            #cbt-next-btn {
+                padding: 7px 12px !important;
+                font-size: 12px !important;
+                line-height: 1.2 !important;
+            }
+        }
+
         /* Multi-Speaker Dialogue Wave Effect */
         .pulse-wave { animation: pulseAnim 1.4s ease-in-out infinite; }
         @keyframes pulseAnim {
@@ -1162,61 +1303,61 @@
     </div>
 
     <!-- MODEL TEST EXAM UI (Mobile Responsive) -->
-    <div id="exam-ui" class="hidden min-h-screen h-[100dvh] flex flex-col">
-        <header class="glass-panel rounded-none p-3 sm:p-4 flex justify-between items-center border-b border-white/10 flex-shrink-0">
+    <div id="exam-ui" class="hidden h-[100dvh] min-h-0 flex flex-col overflow-hidden">
+        <header class="glass-panel rounded-none p-2.5 sm:p-4 flex justify-between items-center border-b border-white/10 flex-shrink-0">
             <button onclick="confirmExitModelExam()" class="bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold border border-white/20">EXIT</button>
             <div id="timer" class="text-xl sm:text-3xl font-black text-red-500 bg-red-500/10 px-4 sm:px-8 py-1 rounded-xl border border-red-500/30 font-mono">60:00</div>
             <div id="user-display" class="font-bold text-blue-400 uppercase text-xs truncate max-w-[120px] sm:max-w-none"></div>
             <button onclick="finishExam()" class="bg-red-600 px-5 sm:px-10 py-1.5 sm:py-2 rounded-full font-black hover:bg-red-700 transition text-xs sm:text-sm">FINISH</button>
         </header>
-        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-            <iframe id="pdf-view" class="w-full md:flex-1 h-[40vh] md:h-full border-none bg-white/5"></iframe>
-            <div id="quest-list" class="w-full md:w-[420px] h-[60vh] md:h-full bg-black/20 overflow-y-auto p-4 sm:p-6 space-y-4 border-t md:border-t-0 md:border-l border-white/10 pb-20 md:pb-6"></div>
+        <div class="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+            <iframe id="pdf-view" class="w-full md:flex-1 h-[36dvh] md:h-full border-none bg-white/5 flex-shrink-0"></iframe>
+            <div id="quest-list" class="w-full md:w-[420px] flex-1 min-h-0 md:h-full bg-black/20 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 border-t md:border-t-0 md:border-l border-white/10 pb-6 md:pb-6"></div>
         </div>
     </div>
 
     <!-- AUTHENTIC JFT-BASIC CBT EXAM INTERFACE -->
-    <div id="cbt-exam-ui" class="hidden fixed inset-0 z-[1500] min-h-screen h-[100dvh] flex flex-col cbt-root select-none overflow-hidden">
+    <div id="cbt-exam-ui" class="hidden fixed inset-0 z-[1500] h-[100dvh] min-h-0 flex flex-col cbt-root select-none overflow-hidden">
         <!-- Prometric Top Header (Mobile Responsive) -->
         <header class="cbt-header px-3 sm:px-6 py-2 sm:py-3 flex justify-between items-center shadow-md flex-shrink-0">
-            <div class="flex items-center gap-3 sm:gap-6 min-w-0">
+            <div class="flex items-center gap-2 sm:gap-6 min-w-0">
                 <div class="min-w-0">
                     <div class="text-[10px] sm:text-[11px] text-blue-200 font-semibold tracking-wider uppercase hidden sm:block">Japan Foundation Test for Basic Japanese</div>
                     <div id="cbt-header-title" class="text-sm sm:text-lg font-black tracking-wide truncate max-w-[140px] sm:max-w-none">JFT-Basic CBT</div>
                 </div>
-                <div class="h-6 sm:h-8 w-[1px] bg-blue-400/40"></div>
+                <div class="h-5 sm:h-8 w-[1px] bg-blue-400/40 flex-shrink-0"></div>
                 <div class="text-[11px] sm:text-xs min-w-0">
                     <div class="text-blue-200 hidden sm:block">Candidate</div>
-                    <div id="cbt-candidate-name" class="font-bold text-white uppercase truncate max-w-[100px] sm:max-w-none">STUDENT</div>
+                    <div id="cbt-candidate-name" class="font-bold text-white uppercase truncate max-w-[95px] sm:max-w-none">STUDENT</div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-6">
-                <div class="bg-black/30 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded border border-blue-400/30 flex items-center gap-1.5 sm:gap-3">
+            <div class="flex items-center gap-2 sm:gap-6 flex-shrink-0">
+                <div class="bg-black/30 px-2 sm:px-4 py-0.5 sm:py-1.5 rounded border border-blue-400/30 flex items-center gap-1.5 sm:gap-3">
                     <span class="text-[10px] sm:text-xs text-blue-200 font-bold uppercase hidden sm:inline">Time</span>
                     <span id="cbt-timer" class="text-lg sm:text-2xl font-black text-yellow-300 font-mono">60:00</span>
                 </div>
-                <button onclick="confirmFinishCbt()" class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded font-black text-xs sm:text-sm shadow border border-red-400 transition whitespace-nowrap">
+                <button onclick="confirmFinishCbt()" class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-2.5 sm:px-6 py-1 sm:py-2 rounded font-black text-[11px] sm:text-sm shadow border border-red-400 transition whitespace-nowrap">
                     Finish (終了)
                 </button>
             </div>
         </header>
 
         <!-- Section Tabs & Toolbar (Horizontally Scrollable) -->
-        <div class="cbt-subbar flex justify-between items-center px-2 sm:px-4 flex-shrink-0">
-            <div id="cbt-section-tabs" class="flex overflow-x-auto no-scrollbar"></div>
-            <div class="flex items-center gap-1.5 sm:gap-3 py-1.5">
+        <div class="cbt-subbar flex justify-between items-center px-2 sm:px-4 flex-shrink-0 gap-1">
+            <div id="cbt-section-tabs" class="flex min-w-0 flex-1 overflow-x-auto no-scrollbar"></div>
+            <div class="flex items-center gap-1 sm:gap-3 py-1 sm:py-1.5 flex-shrink-0">
                 <button id="cbt-flag-btn" onclick="toggleCbtFlag()" class="px-2 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-bold border border-gray-400 bg-white hover:bg-gray-100 text-gray-800 flex items-center gap-1 shadow-sm whitespace-nowrap">
                     <span>⚑</span> <span id="cbt-flag-text" class="hidden sm:inline">Flag for Review</span>
                 </button>
-                <button onclick="toggleCbtPalette()" class="px-2.5 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-bold border border-blue-700 bg-blue-600 text-white hover:bg-blue-700 shadow-sm whitespace-nowrap">
+                <button onclick="toggleCbtPalette()" class="px-2 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-bold border border-blue-700 bg-blue-600 text-white hover:bg-blue-700 shadow-sm whitespace-nowrap">
                     Questions (一覧)
                 </button>
             </div>
         </div>
 
         <!-- Question Palette Drawer -->
-        <div id="cbt-palette-drawer" class="hidden bg-gray-100 border-b border-gray-300 px-4 sm:px-6 py-3 shadow-inner">
+        <div id="cbt-palette-drawer" class="hidden bg-gray-100 border-b border-gray-300 px-3 sm:px-6 py-2.5 sm:py-3 shadow-inner flex-shrink-0 max-h-[38dvh] overflow-y-auto">
             <div class="flex justify-between items-center mb-2">
                 <span class="text-xs font-bold text-gray-700">Jump to Question:</span>
                 <div class="flex gap-3 text-[11px] font-semibold text-gray-600">
@@ -1228,10 +1369,10 @@
             <div id="cbt-q-grid" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto py-1"></div>
         </div>
 
-        <!-- Main Split Question Area (Scrollable & Responsive) -->
-        <div class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-white">
+        <!-- Main Split Question Area (Scrollable Middle Container with Pinned Header & Footer) -->
+        <div id="cbt-main-scroll" class="flex-1 min-h-0 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden bg-white">
             <!-- Left Pane: Reading Passage / Illustration / Audio -->
-            <div class="w-full md:w-1/2 p-4 sm:p-6 md:p-8 overflow-y-auto border-b md:border-b-0 md:border-r border-gray-300 bg-[#f8fafc] max-h-[45vh] md:max-h-full flex-shrink-0">
+            <div id="cbt-left-pane" class="w-full md:w-1/2 p-4 sm:p-6 md:p-8 md:overflow-y-auto border-b md:border-b-0 md:border-r border-gray-300 bg-[#f8fafc] md:max-h-full flex-shrink-0">
                 <div class="flex justify-between items-center mb-3 sm:mb-4 pb-2 border-b border-gray-300">
                     <span id="cbt-sec-badge" class="bg-[#003366] text-white px-2.5 sm:px-3 py-0.5 sm:py-1 rounded text-[11px] sm:text-xs font-bold uppercase">Section 1</span>
                     <span id="cbt-q-counter" class="text-xs sm:text-sm font-black text-gray-700">Question 1 of 40</span>
@@ -1265,28 +1406,28 @@
             </div>
 
             <!-- Right Pane: Question & 4 Choices -->
-            <div class="w-full md:w-1/2 p-4 sm:p-6 md:p-8 overflow-y-auto bg-white flex flex-col justify-between pb-28 md:pb-8 flex-1">
+            <div id="cbt-right-pane" class="w-full md:w-1/2 p-4 sm:p-6 md:p-8 md:overflow-y-auto bg-white flex flex-col justify-between pb-4 md:pb-8 flex-1">
                 <div>
-                    <div class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-1 sm:mb-2">Question (問題)</div>
+                    <div id="cbt-right-pane-label-q" class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-1 sm:mb-2">Question (問題)</div>
                     <div id="cbt-question-text" class="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-4 sm:mb-8 leading-relaxed whitespace-pre-line border-b pb-3 sm:pb-4"></div>
 
-                    <div class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-2 sm:mb-3">Select One Answer (選択肢)</div>
+                    <div id="cbt-right-pane-label-opts" class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-2 sm:mb-3">Select One Answer (選択肢)</div>
                     <div id="cbt-options-container" class="space-y-2.5 sm:space-y-3.5"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Sticky / Fixed Accessible Footer on Mobile & Desktop -->
-        <footer class="cbt-footer px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sticky bottom-0 z-50 shadow-[0_-4px_15px_rgba(0,0,0,0.25)] flex-shrink-0 pb-safe">
-            <div class="flex items-center gap-1.5 sm:gap-3">
-                <span class="text-[10px] sm:text-xs text-blue-200">Progress:</span>
-                <span id="cbt-progress-text" class="text-xs sm:text-sm font-bold text-white whitespace-nowrap">0 / 40 Ans</span>
+        <!-- Sticky / Fixed Pinned Footer on Mobile & Desktop -->
+        <footer id="cbt-exam-footer" class="cbt-footer px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sticky bottom-0 z-50 shadow-[0_-4px_15px_rgba(0,0,0,0.25)] flex-shrink-0 pb-safe">
+            <div class="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+                <span class="hidden sm:inline text-[10px] sm:text-xs text-blue-200">Progress:</span>
+                <span id="cbt-progress-text" class="text-[11px] sm:text-sm font-bold text-white whitespace-nowrap">0 / 40 Ans</span>
             </div>
             <div class="flex items-center gap-2 sm:gap-4 flex-1 sm:flex-initial justify-end">
-                <button id="cbt-prev-btn" onclick="cbtStepQuestion(-1)" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-bold text-xs sm:text-sm border border-white/30 transition flex-1 sm:flex-initial text-center justify-center">
+                <button id="cbt-prev-btn" onclick="cbtStepQuestion(-1)" class="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-lg font-bold text-xs sm:text-sm border border-white/30 transition flex-1 sm:flex-initial text-center justify-center whitespace-nowrap">
                     ◀ Prev (前へ)
                 </button>
-                <button id="cbt-next-btn" onclick="cbtStepQuestion(1)" class="bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white px-6 sm:px-8 py-2 sm:py-2.5 rounded-lg font-black text-xs sm:text-sm shadow transition flex-1 sm:flex-initial text-center justify-center">
+                <button id="cbt-next-btn" onclick="cbtStepQuestion(1)" class="bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white px-4 sm:px-8 py-2 sm:py-2.5 rounded-lg font-black text-xs sm:text-sm shadow transition flex-1 sm:flex-initial text-center justify-center whitespace-nowrap">
                     Next (次へ) ▶
                 </button>
             </div>
@@ -5094,12 +5235,20 @@
             const flagBtn = document.getElementById('cbt-flag-btn');
             const flagTxt = document.getElementById('cbt-flag-text');
             if(cbtFlags[qKey]) {
-                flagBtn.className = "px-3 py-1 rounded text-xs font-bold border border-red-500 bg-red-50 text-red-700 flex items-center gap-1.5 shadow-sm";
+                flagBtn.className = "px-2 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-bold border border-red-500 bg-red-50 text-red-700 flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap";
                 flagTxt.innerText = "Flagged (見直し中)";
             } else {
-                flagBtn.className = "px-3 py-1 rounded text-xs font-bold border border-gray-400 bg-white hover:bg-gray-100 text-gray-800 flex items-center gap-1.5 shadow-sm";
+                flagBtn.className = "px-2 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-bold border border-gray-400 bg-white hover:bg-gray-100 text-gray-800 flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap";
                 flagTxt.innerText = "Flag for Review (後で見直す)";
             }
+
+            // Reset scroll containers cleanly when changing questions
+            const mainScroll = document.getElementById('cbt-main-scroll');
+            const leftPane = document.getElementById('cbt-left-pane');
+            const rightPane = document.getElementById('cbt-right-pane');
+            if(mainScroll) mainScroll.scrollTop = 0;
+            if(leftPane) leftPane.scrollTop = 0;
+            if(rightPane) rightPane.scrollTop = 0;
 
             const isListeningSec = (q.section && (q.section.includes('Listening') || q.section.includes('聴解'))) ||
                                    (q.instruction && (q.instruction.includes('おんせい') || q.instruction.includes('音声'))) ||
