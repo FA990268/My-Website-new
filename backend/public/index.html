@@ -365,11 +365,19 @@
                 </button>
             </nav>
 
-            <!-- Right Controls: Login (Desktop) & Responsive Hamburger / Three-Dot Menu Trigger -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                <button onclick="navigateTo('login')" class="hidden md:inline-flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition border border-blue-400/40 shadow-sm">
+            <!-- Right Controls: Auth Buttons (Desktop) & Responsive Hamburger / Three-Dot Menu Trigger -->
+            <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+                <button id="header-login-btn" onclick="navigateTo('login')" class="hidden md:inline-flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition border border-blue-400/40 shadow-sm">
                     <span>🎓</span>
                     <span>Student Login</span>
+                </button>
+                <button id="header-profile-btn" onclick="navigateTo('profile')" class="hidden items-center gap-1.5 bg-cyan-600/90 hover:bg-cyan-500 text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition border border-cyan-300/40 shadow-sm max-w-[170px]" title="Open Student Profile Dashboard">
+                    <span class="w-2 h-2 rounded-full bg-emerald-300 flex-shrink-0"></span>
+                    <span id="header-profile-name" class="truncate">My Profile</span>
+                </button>
+                <button id="header-logout-btn" onclick="logoutStudent()" class="hidden items-center gap-1.5 bg-rose-600/85 hover:bg-rose-500 text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition border border-rose-400/40 shadow-sm" title="Log Out">
+                    <span>🚪</span>
+                    <span>Logout</span>
                 </button>
                 <!-- Mobile Hamburger (☰) / Desktop Three-Dot (⋮) Drawer Trigger -->
                 <button id="three-dot-btn" type="button" onclick="toggleThreeDotMenu(event)" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="three-dot-menu" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center text-white text-base sm:text-lg font-black transition active:scale-95 flex-shrink-0" title="Menu & Admin">
@@ -385,7 +393,7 @@
         <div class="px-3 py-2 border-b border-white/10 flex justify-between items-center mb-2">
             <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider md:hidden">Navigation</span>
             <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider hidden md:inline">Quick Navigation</span>
-            <span class="text-[10px] text-emerald-400 font-mono flex items-center gap-1">● Active</span>
+            <span id="drawer-auth-badge" class="text-[10px] text-emerald-400 font-mono flex items-center gap-1">● Active</span>
         </div>
 
         <!-- Mobile Vertical Nav Pills (< 768px) -->
@@ -406,18 +414,47 @@
                 <span class="text-sm">ℹ️</span>
                 <span>About Us</span>
             </button>
-            <button type="button" onclick="navigateTo('login')" data-mobile-view="login" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+            <button id="mobile-login-btn" type="button" onclick="navigateTo('login')" data-mobile-view="login" class="mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
                 <span class="text-sm">🎓</span>
                 <span>Student Login</span>
+            </button>
+            <button id="mobile-profile-btn" type="button" onclick="navigateTo('profile')" data-mobile-view="profile" class="hidden mobile-nav-pill w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-3">
+                <span class="text-sm">👤</span>
+                <span id="mobile-profile-label" class="truncate">My Profile</span>
+            </button>
+            <button id="mobile-logout-btn" type="button" onclick="logoutStudent(); closeThreeDotMenu();" class="hidden w-full text-left px-4 py-2.5 rounded-full bg-rose-600/25 hover:bg-rose-600/40 border border-rose-400/40 text-xs font-bold text-rose-200 flex items-center gap-3 transition">
+                <span class="text-sm">🚪</span>
+                <span>Logout</span>
             </button>
         </nav>
 
         <div class="space-y-1">
-            <button type="button" onclick="navigateTo('login')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white items-center gap-3 transition">
+            <button id="drawer-login-btn" type="button" onclick="navigateTo('login')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white items-center gap-3 transition">
                 <span class="text-base">🎓</span>
                 <div>
-                    <div>Student Registration / Login</div>
-                    <div class="text-[10px] text-gray-400 font-normal">Candidate login & exam profile</div>
+                    <div>Student Login</div>
+                    <div class="text-[10px] text-gray-400 font-normal">Sign in with Name &amp; Reg No.</div>
+                </div>
+            </button>
+            <button id="drawer-register-btn" type="button" onclick="navigateTo('register')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-sky-300 items-center gap-3 transition">
+                <span class="text-base">✍️</span>
+                <div>
+                    <div>Candidate Registration</div>
+                    <div class="text-[10px] text-gray-400 font-normal">Create a new exam profile</div>
+                </div>
+            </button>
+            <button id="drawer-profile-btn" type="button" onclick="navigateTo('profile')" class="hidden w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-emerald-300 items-center gap-3 transition">
+                <span class="text-base">👤</span>
+                <div>
+                    <div>My Profile Dashboard</div>
+                    <div class="text-[10px] text-gray-400 font-normal">Test history &amp; activity stats</div>
+                </div>
+            </button>
+            <button id="drawer-logout-btn" type="button" onclick="logoutStudent(); closeThreeDotMenu();" class="hidden w-full text-left px-3 py-2 rounded-xl hover:bg-rose-500/20 text-xs font-bold text-rose-300 items-center gap-3 transition">
+                <span class="text-base">🚪</span>
+                <div>
+                    <div>Logout</div>
+                    <div class="text-[10px] text-gray-400 font-normal">Clear session &amp; return to login</div>
                 </div>
             </button>
             <button type="button" onclick="navigateTo('mock')" class="hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-cyan-300 items-center gap-3 transition">
@@ -587,7 +624,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-3 flex-shrink-0">
-                <button onclick="navigateTo('login')" class="bg-blue-600 hover:bg-blue-500 text-white px-7 py-3 rounded-2xl font-black text-xs sm:text-sm transition shadow-lg shadow-blue-500/30">
+                <button onclick="navigateTo('register')" class="bg-blue-600 hover:bg-blue-500 text-white px-7 py-3 rounded-2xl font-black text-xs sm:text-sm transition shadow-lg shadow-blue-500/30">
                     REGISTER FOR CBT EXAM →
                 </button>
             </div>
@@ -655,7 +692,7 @@
                     <li>Complete grammar &amp; script mastery</li>
                 </ul>
                 <div class="pt-2">
-                    <button onclick="navigateTo('login')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition">
+                    <button onclick="navigateTo('register')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition">
                         Enroll &amp; Take Mock Test →
                     </button>
                 </div>
@@ -781,7 +818,7 @@
                     Ready to begin your journey to Japan? Visit our campus or connect directly with our advisors.
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="navigateTo('login')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-xs font-bold transition">
+                    <button onclick="navigateTo('register')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-xs font-bold transition">
                         Candidate Registration →
                     </button>
                     <a href="https://wa.me/8801340315117" target="_blank" class="glass-panel hover:bg-white/20 text-white px-5 py-2.5 rounded-full text-xs font-bold transition border border-white/20">
@@ -812,12 +849,12 @@
         </div>
     </div>
 
-    <!-- LOGIN / CANDIDATE REGISTRATION SECTION -->
-    <section id="login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24">
-        <div class="glass-panel p-8 w-full max-w-lg text-center">
+    <!-- CANDIDATE REGISTRATION SECTION -->
+    <section id="login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24 pb-12">
+        <div class="glass-panel p-6 sm:p-8 w-full max-w-lg text-center">
             <div class="inline-block bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold mb-4">DAI ICHI ACADEMY KHULNA • CBT CENTER</div>
             <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">CANDIDATE REGISTRATION (পরীক্ষার্থী নিবন্ধন)</h2>
-            <p class="text-xs text-gray-300 mb-4">JFT সার্টিফিকেট ও অনলাইন পরীক্ষার জন্য আপনার সঠিক তথ্য প্রদান করুন</p>
+            <p class="text-xs text-gray-300 mb-4">JFT সার্টিফিকেট ও অনলাইন পরীক্ষার জন্য আপনার সঠিক তথ্য দিয়ে নিবন্ধন করুন</p>
             <div id="login-pending-hint" class="hidden bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 p-3 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2"></div>
             <form id="candidate-reg-form" onsubmit="event.preventDefault(); goToPortalChoice();" class="space-y-4">
                 <div class="text-left">
@@ -825,7 +862,7 @@
                     <input type="text" id="s-name" required placeholder="Full Candidate Name (e.g. FATEMA ISLAM LIPY)" class="glass-input w-full p-3.5 rounded-xl text-sm font-bold">
                 </div>
                 <div class="text-left">
-                    <label class="text-[11px] font-bold text-gray-300 block mb-1">受験番号 / Registration No. <span class="text-rose-400">*</span></label>
+                    <label class="text-[11px] font-bold text-gray-300 block mb-1">受験番号 / Registration No. (Used as Password) <span class="text-rose-400">*</span></label>
                     <input type="text" id="s-reg" required placeholder="Registration Number (e.g. 40019402 or BD-2026-9081)" class="glass-input w-full p-3.5 rounded-xl text-sm font-mono">
                 </div>
                 <div class="grid grid-cols-2 gap-3 text-left">
@@ -857,17 +894,189 @@
                 </div>
                 <div id="candidate-reg-status" class="hidden text-xs font-semibold p-2.5 rounded-xl border text-left"></div>
                 <button id="btn-candidate-register" type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-2xl font-black text-base sm:text-lg transition shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed">
-                    REGISTER &amp; START EXAM →
+                    REGISTER ACCOUNT →
                 </button>
-                <button type="button" onclick="navigateTo('home')" class="w-full text-xs text-gray-400 hover:text-white py-2 transition font-bold">
-                    ← Back to Home Page
-                </button>
+                <div class="pt-1 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+                    <button type="button" onclick="navigateTo('login')" class="text-cyan-300 hover:text-cyan-200 font-bold underline">
+                        Already registered? Log in here →
+                    </button>
+                    <button type="button" onclick="navigateTo('home')" class="text-gray-400 hover:text-white transition font-bold">
+                        ← Back to Home Page
+                    </button>
+                </div>
             </form>
         </div>
     </section>
 
+    <!-- DEDICATED STUDENT LOGIN SECTION -->
+    <section id="student-login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24 pb-12">
+        <div class="glass-panel p-6 sm:p-8 w-full max-w-md text-center border border-white/20 shadow-2xl">
+            <div class="inline-block bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-cyan-400/30">
+                STUDENT PORTAL • LOGIN
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">STUDENT LOGIN</h2>
+            <p class="text-xs text-gray-300 mb-5">
+                Log in using your Registered Name and Registration Number to access your profile dashboard, test history, and CBT exams.
+            </p>
+            <div id="student-login-info" class="hidden text-xs font-semibold p-3 rounded-xl border text-left mb-4"></div>
+            <form id="student-login-form" onsubmit="event.preventDefault(); handleStudentLogin();" class="space-y-4">
+                <div class="text-left">
+                    <label for="login-name" class="text-[11px] font-bold text-gray-300 block mb-1">
+                        氏名 / Full Name <span class="text-rose-400">*</span>
+                    </label>
+                    <input type="text" id="login-name" required autocomplete="name" placeholder="Enter your registered Full Name" class="glass-input w-full p-3.5 rounded-xl text-sm font-bold">
+                </div>
+                <div class="text-left">
+                    <label for="login-reg" class="text-[11px] font-bold text-gray-300 block mb-1">
+                        受験番号 / Registration No. (Password) <span class="text-rose-400">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="login-reg" required autocomplete="current-password" placeholder="Enter Registration Number" class="glass-input w-full p-3.5 pr-12 rounded-xl text-sm font-mono">
+                        <button type="button" id="toggle-login-reg-vis" onclick="toggleLoginPasswordVisibility()" aria-label="Show or hide registration password" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-300 hover:text-white px-2 py-1 rounded bg-white/10">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                <div id="student-login-status" class="hidden text-xs font-semibold p-2.5 rounded-xl border text-left"></div>
+                <button id="btn-student-login" type="submit" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white py-3.5 rounded-2xl font-black text-base transition shadow-lg shadow-cyan-500/25 disabled:opacity-60 disabled:cursor-not-allowed">
+                    LOG IN TO DASHBOARD →
+                </button>
+            </form>
+            <div class="mt-5 pt-4 border-t border-white/10 space-y-2.5 text-xs">
+                <div class="text-gray-300">
+                    New student?
+                    <button type="button" onclick="navigateTo('register')" class="text-cyan-300 hover:text-cyan-200 font-black underline ml-1">
+                        Register Candidate Profile →
+                    </button>
+                </div>
+                <button type="button" onclick="navigateTo('home')" class="text-gray-400 hover:text-white font-bold transition">
+                    ← Back to Home Page
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROTECTED STUDENT PROFILE DASHBOARD -->
+    <section id="student-profile-sec" class="hidden min-h-screen p-4 sm:p-6 md:p-8 pt-28 sm:pt-32 pb-20 max-w-[1200px] w-full mx-auto space-y-6">
+        <!-- Profile Header Card -->
+        <div class="glass-panel p-6 sm:p-8 border border-white/20 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+                <div class="w-24 h-28 sm:w-28 sm:h-32 rounded-2xl border-2 border-cyan-400/50 bg-slate-900/70 overflow-hidden shadow-lg flex-shrink-0">
+                    <img id="profile-photo" crossorigin="anonymous" src="assets/default_avatar.svg" alt="Candidate Profile Photo" class="w-full h-full object-cover">
+                </div>
+                <div class="space-y-1.5 min-w-0">
+                    <div class="inline-flex items-center gap-2 bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 px-3 py-0.5 rounded-full text-[11px] font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span>Authenticated Student Session</span>
+                    </div>
+                    <h2 id="profile-name" class="text-2xl sm:text-3xl font-black text-white tracking-wide break-words">STUDENT NAME</h2>
+                    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs">
+                        <span class="bg-blue-500/20 text-blue-200 border border-blue-400/30 px-2.5 py-1 rounded-lg font-mono font-bold">
+                            Reg No: <span id="profile-reg">--</span>
+                        </span>
+                        <span id="profile-meta" class="bg-white/10 text-gray-200 px-2.5 py-1 rounded-lg font-semibold">
+                            Bangladesh • Male
+                        </span>
+                        <span id="profile-dob" class="bg-white/10 text-gray-300 px-2.5 py-1 rounded-lg font-mono">
+                            DOB: --
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-2.5 flex-shrink-0">
+                <button type="button" onclick="refreshStudentProfile()" id="btn-profile-refresh" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl text-xs font-bold border border-white/20 transition flex items-center gap-1.5">
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                </button>
+                <button type="button" onclick="logoutStudent()" id="btn-student-logout" class="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-xs font-black border border-rose-400/40 shadow-lg shadow-rose-500/25 transition flex items-center gap-2">
+                    <span>🚪</span>
+                    <span>LOGOUT</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pending Selected Exam Resume Banner -->
+        <div id="profile-pending-exam-banner" class="hidden glass-panel p-4 sm:p-5 border-2 border-cyan-400/50 bg-cyan-950/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs sm:text-sm text-cyan-100 font-semibold text-center sm:text-left">
+                🎯 You selected an exam before signing in. Ready to begin?
+            </div>
+            <button type="button" onclick="resumePendingExamFromProfile()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-6 py-2.5 rounded-xl text-xs font-black shadow-lg whitespace-nowrap">
+                ▶ Continue to Selected Exam
+            </button>
+        </div>
+
+        <!-- Activity Metrics Summary -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass-panel p-5 border border-cyan-400/30 text-center">
+                <div class="text-[11px] font-bold text-cyan-300 uppercase tracking-wider mb-1">Total Tests Completed</div>
+                <div id="profile-stat-total" class="text-3xl sm:text-4xl font-black text-white">0</div>
+                <div class="text-[10px] text-gray-400 mt-1">Recorded CBT &amp; Model exams</div>
+            </div>
+            <div class="glass-panel p-5 border border-emerald-400/30 text-center">
+                <div class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider mb-1">Tests Passed (合格)</div>
+                <div id="profile-stat-passed" class="text-3xl sm:text-4xl font-black text-emerald-400">0</div>
+                <div class="text-[10px] text-gray-400 mt-1">Reached pass threshold</div>
+            </div>
+            <div class="glass-panel p-5 border border-amber-400/30 text-center">
+                <div class="text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-1">Best Scaled Score</div>
+                <div id="profile-stat-best" class="text-3xl sm:text-4xl font-black text-amber-300">--</div>
+                <div class="text-[10px] text-gray-400 mt-1">Out of 250 pts</div>
+            </div>
+            <div class="glass-panel p-5 border border-purple-400/30 text-center">
+                <div class="text-[11px] font-bold text-purple-300 uppercase tracking-wider mb-1">Average Score</div>
+                <div id="profile-stat-avg" class="text-3xl sm:text-4xl font-black text-purple-300">--</div>
+                <div class="text-[10px] text-gray-400 mt-1">Across completed tests</div>
+            </div>
+        </div>
+
+        <!-- Quick Launch Portals -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button type="button" onclick="openPortalChoiceFromProfile('cbt')" class="glass-card p-5 border border-cyan-400/40 text-left flex items-center justify-between gap-4 hover:border-cyan-300">
+                <div>
+                    <div class="text-xs font-bold text-cyan-300 uppercase mb-1">Official Prometric Simulation</div>
+                    <div class="text-lg font-black text-white">🖥️ Launch CBT Exam Portal</div>
+                    <div class="text-[11px] text-gray-300 mt-1">Take timed JFT-Basic 4-section CBT mock exams</div>
+                </div>
+                <span class="text-2xl text-cyan-300 font-black">→</span>
+            </button>
+            <button type="button" onclick="openPortalChoiceFromProfile('model')" class="glass-card p-5 border border-blue-400/40 text-left flex items-center justify-between gap-4 hover:border-blue-300">
+                <div>
+                    <div class="text-xs font-bold text-blue-300 uppercase mb-1">PDF &amp; Custom Assessment</div>
+                    <div class="text-lg font-black text-white">📄 Launch Model Test Portal</div>
+                    <div class="text-[11px] text-gray-300 mt-1">Practice split-screen PDF &amp; listening model tests</div>
+                </div>
+                <span class="text-2xl text-blue-300 font-black">→</span>
+            </button>
+        </div>
+
+        <!-- Test History & Activity Log -->
+        <div class="glass-panel p-6 sm:p-7 border border-white/20 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-black text-white">📊 TEST HISTORY &amp; ACTIVITY</h3>
+                    <p class="text-xs text-gray-400">Your persisted exam attempts, scores, and pass statuses</p>
+                </div>
+                <span id="profile-history-count-badge" class="bg-cyan-500/20 text-cyan-200 border border-cyan-400/30 px-3 py-1 rounded-full text-xs font-bold">
+                    0 Completed
+                </span>
+            </div>
+            <div id="profile-history-list" class="space-y-3">
+                <div class="text-center py-8 text-xs text-gray-400">Loading test activity...</div>
+            </div>
+        </div>
+    </section>
+
     <!-- PORTAL MODE SELECTION -->
-    <section id="portal-choice-sec" class="hidden min-h-screen flex flex-col items-center justify-center p-6">
+    <section id="portal-choice-sec" class="hidden min-h-screen flex flex-col items-center justify-center p-6 pt-24">
+        <div class="w-full max-w-4xl flex flex-wrap justify-between items-center gap-3 mb-6">
+            <button type="button" onclick="navigateTo('profile')" class="bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-100 border border-cyan-400/40 px-4 py-2 rounded-xl text-xs font-bold transition">
+                👤 Back to Profile Dashboard
+            </button>
+            <button type="button" onclick="logoutStudent()" class="bg-rose-600/30 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-400/40 px-4 py-2 rounded-xl text-xs font-bold transition">
+                🚪 Logout
+            </button>
+        </div>
         <h2 class="text-3xl font-black mb-2 italic tracking-wide">SELECT EXAM PORTAL</h2>
         <p class="text-xs text-gray-400 mb-10">Choose between Prometric CBT Simulation or Standard PDF Model Test</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
@@ -1580,6 +1789,10 @@
                 <span>CBT টেস্ট সিলেকশন (CBT Test Selection)</span>
             </button>
             <div class="flex flex-wrap gap-2">
+                <button onclick="returnToProfileFromResult()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition shadow-md flex items-center gap-1.5">
+                    <span>👤</span>
+                    <span>Profile Dashboard</span>
+                </button>
                 <button onclick="returnToHomeFromResult()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition border border-white/20 flex items-center gap-1.5">
                     <span>🏠</span>
                     <span>Home Page</span>
@@ -1815,6 +2028,10 @@
             <button onclick="downloadPDF()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3.5 rounded-2xl font-black text-sm transition shadow-lg flex items-center gap-2">
                 <span>📥</span>
                 <span>DOWNLOAD RESULT PDF</span>
+            </button>
+            <button onclick="returnToProfileFromResult()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-3.5 rounded-2xl font-black text-sm transition shadow-lg flex items-center gap-2">
+                <span>👤</span>
+                <span>MY PROFILE &amp; HISTORY</span>
             </button>
             <button onclick="returnToHomeFromResult()" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3.5 rounded-2xl font-bold text-sm transition border border-white/20 flex items-center gap-1.5">
                 <span>🏠</span>
@@ -2314,7 +2531,6 @@
             try { renderGroupOptions(); } catch(e) {}
             try { renderAdminModelList(); } catch(e) {}
             try { checkStoredBg(); } catch(e) {}
-            try { loadCandidateProfile(); } catch(e) {}
             const photoInputEl = document.getElementById('s-photo');
             if(photoInputEl && !photoInputEl.dataset.bound) {
                 photoInputEl.dataset.bound = "true";
@@ -2324,17 +2540,12 @@
                         r.onload = e => {
                             const p = document.getElementById('res-photo');
                             if(p) p.src = e.target.result;
-                            try {
-                                const prof = JSON.parse(localStorage.getItem('jft_candidate_profile_v1') || localStorage.getItem('jft_candidate_profile') || '{}');
-                                prof.photo = e.target.result;
-                                localStorage.setItem('jft_candidate_profile_v1', JSON.stringify(prof));
-                                localStorage.setItem('jft_candidate_profile', JSON.stringify(prof));
-                            } catch(err) {}
                         };
                         r.readAsDataURL(this.files[0]);
                     }
                 });
             }
+            try { await restoreStudentSessionOnBoot(); } catch(e) { console.warn("Session restore note:", e); }
             try { await fetchSiteSettingsFromSupabase(); } catch(e) { console.warn("Supabase site settings load note:", e); }
             try { await fetchNetworkInfo(); } catch(e) { console.warn("Network info fetch warning:", e); }
             try { await fetchVoices(); } catch(e) { console.warn("Voice catalog fetch warning:", e); }
@@ -2343,14 +2554,29 @@
             try { renderHomeExams(); } catch(e) {}
             try { renderStudentCbtList(); } catch(e) {}
 
-            // Auto-restore active exam session if browser reloaded / switched to desktop mode
-            const cbtRestored = tryRestoreCbtSession();
+            // Auto-restore active exam session ONLY if authenticated student session is active
+            let cbtRestored = false;
             let modelRestored = false;
-            if(!cbtRestored) {
-                modelRestored = tryRestoreModelSession();
+            if(hasValidStudentSession()) {
+                cbtRestored = tryRestoreCbtSession();
+                if(!cbtRestored) {
+                    modelRestored = tryRestoreModelSession();
+                }
+            } else {
+                clearCbtSession(true);
+                clearModelSession();
             }
             if(!cbtRestored && !modelRestored) {
-                navigateTo('home');
+                let savedView = 'home';
+                try { savedView = localStorage.getItem(STUDENT_LAST_VIEW_KEY) || 'home'; } catch(e) {}
+                if(savedView === 'profile') {
+                    if(hasValidStudentSession()) navigateTo('profile');
+                    else promptStudentLogin('🔒 Please log in with your Name and Registration Number to access your Profile Dashboard.');
+                } else if(savedView === 'mock' || savedView === 'courses' || savedView === 'about' || savedView === 'register' || savedView === 'login') {
+                    navigateTo(savedView);
+                } else {
+                    navigateTo('home');
+                }
             }
             initHomeSlider();
             initThreeDotCollapseListener();
@@ -2924,27 +3150,39 @@
         let threeDotIdleTimer = null;
 
         function navigateTo(viewName) {
+            closeThreeDotMenu();
+
+            // Protected route guard for Student Profile Dashboard
+            if(viewName === 'profile' && !hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in with your Name and Registration Number to access your Student Profile Dashboard.');
+                return;
+            }
+            // If already logged in and clicking Login, route to Student Profile Dashboard
+            if(viewName === 'login' && hasValidStudentSession()) {
+                viewName = 'profile';
+            }
+
             const views = {
                 'home': document.getElementById('view-home'),
                 'mock': document.getElementById('view-mock'),
                 'about': document.getElementById('view-about'),
                 'courses': document.getElementById('view-courses'),
-                'login': document.getElementById('login-sec')
+                'register': document.getElementById('login-sec'),
+                'login': document.getElementById('student-login-sec'),
+                'profile': document.getElementById('student-profile-sec')
             };
-
-            closeThreeDotMenu();
 
             // Guard against navigating away if active CBT or Model exam is ongoing
             const isCbtActive = !document.getElementById('cbt-exam-ui')?.classList.contains('hidden');
             const isModelActive = !document.getElementById('exam-ui')?.classList.contains('hidden');
 
-            if((isCbtActive || isModelActive) && (viewName === 'home' || viewName === 'about' || viewName === 'courses' || viewName === 'mock' || viewName === 'login')) {
+            if((isCbtActive || isModelActive) && (viewName === 'home' || viewName === 'about' || viewName === 'courses' || viewName === 'mock' || viewName === 'login' || viewName === 'register' || viewName === 'profile')) {
                 if(!confirm("An exam is currently in progress. Navigating away will close the exam session. Do you wish to proceed?")) {
                     return;
                 }
                 clearCbtSession(true);
                 clearModelSession();
-            } else if(viewName === 'home' || viewName === 'mock' || viewName === 'about' || viewName === 'courses' || viewName === 'login') {
+            } else if(viewName === 'home' || viewName === 'mock' || viewName === 'about' || viewName === 'courses' || viewName === 'login' || viewName === 'register' || viewName === 'profile') {
                 // If not in an active exam, ensure any completed/lingering session is wiped
                 clearCbtSession(true);
                 clearModelSession();
@@ -2965,13 +3203,22 @@
             // Toggle target view
             Object.keys(views).forEach(k => {
                 if(views[k]) {
-                    if(k === viewName || (viewName === 'register' && k === 'login')) {
+                    if(k === viewName) {
                         views[k].classList.remove('hidden');
                     } else {
                         views[k].classList.add('hidden');
                     }
                 }
             });
+
+            // Persist current view for seamless refresh while logged in
+            try {
+                if(viewName === 'profile' || viewName === 'home' || viewName === 'mock' || viewName === 'courses' || viewName === 'about') {
+                    localStorage.setItem(STUDENT_LAST_VIEW_KEY, viewName);
+                } else {
+                    localStorage.removeItem(STUDENT_LAST_VIEW_KEY);
+                }
+            } catch(e) {}
 
             // Update capsule navbar active classes
             document.querySelectorAll('.nav-capsule-btn').forEach(btn => {
@@ -2983,9 +3230,8 @@
             });
 
             // Update mobile drawer pill active classes
-            const mobileViewKey = (viewName === 'register') ? 'login' : viewName;
             document.querySelectorAll('.mobile-nav-pill').forEach(btn => {
-                if(btn.dataset.mobileView === mobileViewKey) {
+                if(btn.dataset.mobileView === viewName) {
                     btn.classList.add('active');
                 } else {
                     btn.classList.remove('active');
@@ -3010,7 +3256,7 @@
             // Floating Live Chat visibility toggle
             const floatingChat = document.getElementById('floating-live-chat');
             if(floatingChat) {
-                if(viewName === 'home' || viewName === 'mock' || viewName === 'courses' || viewName === 'about' || viewName === 'login') {
+                if(viewName === 'home' || viewName === 'mock' || viewName === 'courses' || viewName === 'about' || viewName === 'login' || viewName === 'register' || viewName === 'profile') {
                     floatingChat.classList.remove('hidden');
                 } else {
                     floatingChat.classList.add('hidden');
@@ -3026,7 +3272,21 @@
                 renderMockTestsView('all');
             }
 
-            if(viewName === 'login' || viewName === 'register') {
+            if(viewName === 'profile') {
+                renderStudentProfileDashboard();
+                refreshStudentProfile(true);
+            }
+
+            if(viewName === 'login') {
+                setTimeout(() => {
+                    const inp = document.getElementById('login-name');
+                    if(inp) inp.focus();
+                }, 100);
+            }
+
+            if(viewName === 'register') {
+                const loginInfo = document.getElementById('student-login-info');
+                if(loginInfo) loginInfo.classList.add('hidden');
                 setTimeout(() => {
                     const inp = document.getElementById('s-name');
                     if(inp) inp.focus();
@@ -3532,24 +3792,49 @@
         }
 
         const CANDIDATE_PROFILE_KEY = 'jft_candidate_profile_v1';
+        const STUDENT_AUTH_KEY = 'jft_student_auth_v1';
+        const STUDENT_LAST_VIEW_KEY = 'jft_last_view_v1';
+        let currentStudentSession = null;
+        let _studentLoggingIn = false;
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function hasValidStudentSession() {
+            return Boolean(
+                currentStudentSession &&
+                currentStudentSession.token &&
+                currentStudentSession.candidate &&
+                currentStudentSession.candidate.full_name &&
+                currentStudentSession.candidate.registration_no
+            );
+        }
 
         function loadCandidateProfile() {
+            if(hasValidStudentSession()) {
+                const c = currentStudentSession.candidate;
+                return {
+                    id: c.id,
+                    name: c.full_name,
+                    reg: c.registration_no,
+                    dob: c.date_of_birth || '2005-12-12',
+                    loc: c.test_location || 'Bangladesh',
+                    nat: c.nationality || 'Bangladesh',
+                    sex: c.sex || 'Female',
+                    photo: c.photo_url || ''
+                };
+            }
             try {
                 const raw = localStorage.getItem(CANDIDATE_PROFILE_KEY) || localStorage.getItem('jft_candidate_profile');
                 if(!raw) return null;
                 const p = JSON.parse(raw);
                 if(p && p.name) {
-                    const setVal = (id, v) => { const el = document.getElementById(id); if(el && v !== undefined && v !== null) el.value = v; };
-                    setVal('s-name', p.name);
-                    setVal('s-reg', p.reg || '');
-                    setVal('s-dob', p.dob || '2005-12-12');
-                    setVal('s-loc', p.loc || 'Bangladesh');
-                    setVal('s-nat', p.nat || 'Bangladesh');
-                    setVal('s-sex', p.sex || 'Female');
-                    if(p.photo && (p.photo.startsWith('data:image') || p.photo.startsWith('http://') || p.photo.startsWith('https://'))) {
-                        const resPhoto = document.getElementById('res-photo');
-                        if(resPhoto) resPhoto.src = p.photo;
-                    }
                     return p;
                 }
             } catch(e) {
@@ -3583,10 +3868,467 @@
                 return false;
             }
 
-            const profile = { name, reg, dob, loc, nat, sex, photo: photoData };
-            localStorage.setItem(CANDIDATE_PROFILE_KEY, JSON.stringify(profile));
-            localStorage.setItem('jft_candidate_profile', JSON.stringify(profile));
-            return profile;
+            return { name, reg, dob, loc, nat, sex, photo: photoData };
+        }
+
+        function clearStudentSessionCache(clearInputs = true) {
+            currentStudentSession = null;
+            pendingExamLaunch = null;
+            try {
+                localStorage.removeItem(STUDENT_AUTH_KEY);
+                localStorage.removeItem(CANDIDATE_PROFILE_KEY);
+                localStorage.removeItem('jft_candidate_profile');
+                localStorage.removeItem(STUDENT_LAST_VIEW_KEY);
+                localStorage.removeItem(CBT_SESSION_KEY);
+                localStorage.removeItem(MODEL_SESSION_KEY);
+            } catch(e) {}
+            try {
+                sessionStorage.removeItem(STUDENT_AUTH_KEY);
+                sessionStorage.removeItem(CANDIDATE_PROFILE_KEY);
+                sessionStorage.removeItem(CBT_SESSION_KEY);
+                sessionStorage.removeItem(MODEL_SESSION_KEY);
+            } catch(e) {}
+
+            if(clearInputs) {
+                ['s-name', 's-reg', 's-photo', 'login-name', 'login-reg'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.value = '';
+                });
+                const resPhoto = document.getElementById('res-photo');
+                if(resPhoto) resPhoto.src = 'assets/default_avatar.svg';
+                const profPhoto = document.getElementById('profile-photo');
+                if(profPhoto) profPhoto.src = 'assets/default_avatar.svg';
+                const histEl = document.getElementById('profile-history-list');
+                if(histEl) histEl.innerHTML = '';
+            }
+        }
+
+        function applyAuthenticatedStudentSession(token, expiresAt, payload) {
+            const candidate = payload?.candidate || {};
+            currentStudentSession = {
+                token,
+                expiresAt: expiresAt || payload?.expires_at || null,
+                candidate,
+                stats: payload?.stats || { total_tests: 0, passed_tests: 0, best_score: null, average_score: null },
+                history: Array.isArray(payload?.history) ? payload.history : []
+            };
+
+            try {
+                localStorage.setItem(STUDENT_AUTH_KEY, JSON.stringify({
+                    token,
+                    expiresAt: currentStudentSession.expiresAt,
+                    candidateId: candidate.id
+                }));
+                const certProf = {
+                    id: candidate.id,
+                    name: candidate.full_name,
+                    reg: candidate.registration_no,
+                    dob: candidate.date_of_birth || '2005-12-12',
+                    loc: candidate.test_location || 'Bangladesh',
+                    nat: candidate.nationality || 'Bangladesh',
+                    sex: candidate.sex || 'Female',
+                    photo: candidate.photo_url || ''
+                };
+                localStorage.setItem(CANDIDATE_PROFILE_KEY, JSON.stringify(certProf));
+                localStorage.setItem('jft_candidate_profile', JSON.stringify(certProf));
+            } catch(e) {}
+
+            const resPhoto = document.getElementById('res-photo');
+            if(resPhoto) {
+                resPhoto.src = candidate.photo_url || 'assets/default_avatar.svg';
+            }
+
+            syncAuthUIState();
+            renderStudentProfileDashboard();
+        }
+
+        function syncAuthUIState() {
+            const authed = hasValidStudentSession();
+            const fullName = authed ? (currentStudentSession.candidate.full_name || 'Student') : '';
+            const firstName = fullName.split(/\s+/)[0] || 'Profile';
+
+            const hdrLogin = document.getElementById('header-login-btn');
+            const hdrProf = document.getElementById('header-profile-btn');
+            const hdrProfName = document.getElementById('header-profile-name');
+            const hdrLogout = document.getElementById('header-logout-btn');
+
+            if(hdrLogin) {
+                hdrLogin.className = authed
+                    ? 'hidden'
+                    : 'hidden md:inline-flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-500 text-white px-4 py-1.5 rounded-full text-xs font-bold transition border border-blue-400/40 shadow-sm';
+            }
+            if(hdrProf) {
+                hdrProf.className = authed
+                    ? 'hidden md:inline-flex items-center gap-1.5 bg-cyan-600/90 hover:bg-cyan-500 text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition border border-cyan-300/40 shadow-sm max-w-[170px]'
+                    : 'hidden';
+            }
+            if(hdrProfName) hdrProfName.innerText = firstName;
+            if(hdrLogout) {
+                hdrLogout.className = authed
+                    ? 'hidden md:inline-flex items-center gap-1.5 bg-rose-600/85 hover:bg-rose-500 text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition border border-rose-400/40 shadow-sm'
+                    : 'hidden';
+            }
+
+            const mobLogin = document.getElementById('mobile-login-btn');
+            const mobProf = document.getElementById('mobile-profile-btn');
+            const mobProfLbl = document.getElementById('mobile-profile-label');
+            const mobLogout = document.getElementById('mobile-logout-btn');
+            if(mobLogin) mobLogin.classList.toggle('hidden', authed);
+            if(mobProf) mobProf.classList.toggle('hidden', !authed);
+            if(mobProfLbl) mobProfLbl.innerText = authed ? `My Profile (${firstName})` : 'My Profile';
+            if(mobLogout) mobLogout.classList.toggle('hidden', !authed);
+
+            const drwLogin = document.getElementById('drawer-login-btn');
+            const drwReg = document.getElementById('drawer-register-btn');
+            const drwProf = document.getElementById('drawer-profile-btn');
+            const drwLogout = document.getElementById('drawer-logout-btn');
+            if(drwLogin) {
+                drwLogin.className = authed
+                    ? 'hidden'
+                    : 'hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-white items-center gap-3 transition';
+            }
+            if(drwReg) {
+                drwReg.className = authed
+                    ? 'hidden'
+                    : 'hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-sky-300 items-center gap-3 transition';
+            }
+            if(drwProf) {
+                drwProf.className = authed
+                    ? 'hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-white/15 text-xs font-bold text-emerald-300 items-center gap-3 transition'
+                    : 'hidden';
+            }
+            if(drwLogout) {
+                drwLogout.className = authed
+                    ? 'hidden md:flex w-full text-left px-3 py-2 rounded-xl hover:bg-rose-500/20 text-xs font-bold text-rose-300 items-center gap-3 transition'
+                    : 'hidden';
+            }
+
+            const badge = document.getElementById('drawer-auth-badge');
+            if(badge) {
+                badge.innerText = authed ? '● Logged In' : '● Guest';
+                badge.className = authed
+                    ? 'text-[10px] text-emerald-400 font-mono flex items-center gap-1'
+                    : 'text-[10px] text-amber-300 font-mono flex items-center gap-1';
+            }
+        }
+
+        async function restoreStudentSessionOnBoot() {
+            syncAuthUIState();
+            let storedRaw = null;
+            try { storedRaw = localStorage.getItem(STUDENT_AUTH_KEY); } catch(e) {}
+            if(!storedRaw) return false;
+
+            let stored = null;
+            try { stored = JSON.parse(storedRaw); } catch(e) { stored = null; }
+            if(!stored || !stored.token) {
+                clearStudentSessionCache(true);
+                syncAuthUIState();
+                return false;
+            }
+
+            const sb = getSupabaseClient();
+            if(!sb) return false;
+
+            try {
+                const { data, error } = await sb.rpc('student_get_session', {
+                    p_session_token: stored.token
+                });
+                if(error || !data || !data.ok) {
+                    clearStudentSessionCache(true);
+                    syncAuthUIState();
+                    return false;
+                }
+                applyAuthenticatedStudentSession(stored.token, data.expires_at, data);
+                return true;
+            } catch(e) {
+                console.warn('Could not restore student session:', e);
+                return false;
+            }
+        }
+
+        function toggleLoginPasswordVisibility() {
+            const inp = document.getElementById('login-reg');
+            const btn = document.getElementById('toggle-login-reg-vis');
+            if(!inp) return;
+            const show = inp.type === 'password';
+            inp.type = show ? 'text' : 'password';
+            if(btn) btn.innerText = show ? '🙈' : '👁️';
+        }
+
+        function promptStudentLogin(message, pending, tone = 'info') {
+            if(pending) pendingExamLaunch = pending;
+            navigateTo('login');
+            const infoEl = document.getElementById('student-login-info');
+            if(infoEl && message) {
+                infoEl.className = tone === 'success'
+                    ? 'text-xs font-semibold p-3 rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-emerald-200 text-left mb-4'
+                    : 'text-xs font-semibold p-3 rounded-xl border border-cyan-400/40 bg-cyan-500/15 text-cyan-200 text-left mb-4';
+                infoEl.innerHTML = message;
+                infoEl.classList.remove('hidden');
+            }
+        }
+
+        async function handleStudentLogin() {
+            if(_studentLoggingIn) return;
+            const nameInp = document.getElementById('login-name');
+            const regInp = document.getElementById('login-reg');
+            const statusEl = document.getElementById('student-login-status');
+            const btn = document.getElementById('btn-student-login');
+
+            const fullName = (nameInp?.value || '').trim();
+            const regNo = (regInp?.value || '').trim();
+
+            if(!fullName || !regNo) {
+                if(statusEl) {
+                    statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 text-left';
+                    statusEl.innerText = '❌ Please enter both your Registered Full Name and Registration Number.';
+                    statusEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            const sb = getSupabaseClient();
+            if(!sb) {
+                if(statusEl) {
+                    statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 text-left';
+                    statusEl.innerText = '❌ Supabase client is unavailable. Please reload the page.';
+                    statusEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            _studentLoggingIn = true;
+            if(btn) { btn.disabled = true; btn.innerText = '⏳ Authenticating...'; }
+            if(statusEl) {
+                statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 text-cyan-200 text-left';
+                statusEl.innerText = '⏳ Verifying credentials & loading your profile...';
+                statusEl.classList.remove('hidden');
+            }
+
+            try {
+                const { data, error } = await sb.rpc('student_login', {
+                    p_full_name: fullName,
+                    p_registration_no: regNo
+                });
+
+                if(error) {
+                    throw new Error(error.message || 'Login request failed.');
+                }
+                if(!data || !data.ok) {
+                    throw new Error(data?.error || 'Invalid Full Name or Registration Number.');
+                }
+
+                if(statusEl) statusEl.classList.add('hidden');
+                const loginInfo = document.getElementById('student-login-info');
+                if(loginInfo) loginInfo.classList.add('hidden');
+                if(regInp) { regInp.value = ''; regInp.type = 'password'; }
+
+                applyAuthenticatedStudentSession(data.token, data.expires_at, data);
+                navigateTo('profile');
+            } catch(err) {
+                console.warn('Student login failed:', err);
+                if(statusEl) {
+                    statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 text-left';
+                    statusEl.innerText = `❌ ${err.message || 'Invalid Full Name or Registration Number.'}`;
+                    statusEl.classList.remove('hidden');
+                }
+            } finally {
+                _studentLoggingIn = false;
+                if(btn) { btn.disabled = false; btn.innerHTML = 'LOG IN TO DASHBOARD →'; }
+            }
+        }
+
+        async function logoutStudent() {
+            const activeToken = currentStudentSession?.token || (() => {
+                try { return JSON.parse(localStorage.getItem(STUDENT_AUTH_KEY) || '{}')?.token || ''; } catch(e) { return ''; }
+            })();
+
+            // Stop active exam timers/audio cleanly if logging out mid-exam
+            if(cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
+            if(typeof timerInterval !== 'undefined' && timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if(typeof stopCbtDialogueSpeech === 'function') stopCbtDialogueSpeech();
+
+            try {
+                const sb = getSupabaseClient();
+                if(sb && activeToken) {
+                    await sb.rpc('student_logout', { p_session_token: activeToken });
+                }
+            } catch(e) {
+                console.warn('Server logout notice:', e);
+            }
+
+            clearStudentSessionCache(true);
+            syncAuthUIState();
+            promptStudentLogin('👋 You have been logged out securely and all cached session data has been cleared.', null, 'info');
+        }
+
+        async function refreshStudentProfile(silent = false) {
+            if(!hasValidStudentSession()) return false;
+            const sb = getSupabaseClient();
+            if(!sb) return false;
+
+            const btn = document.getElementById('btn-profile-refresh');
+            if(btn && !silent) { btn.disabled = true; btn.innerText = '⏳ Refreshing...'; }
+            try {
+                const { data, error } = await sb.rpc('student_get_session', {
+                    p_session_token: currentStudentSession.token
+                });
+                if(error || !data || !data.ok) {
+                    clearStudentSessionCache(true);
+                    syncAuthUIState();
+                    promptStudentLogin('🔒 Your session expired. Please log in again.');
+                    return false;
+                }
+                applyAuthenticatedStudentSession(currentStudentSession.token, data.expires_at, data);
+                return true;
+            } catch(e) {
+                console.warn('Profile refresh error:', e);
+                return false;
+            } finally {
+                if(btn && !silent) { btn.disabled = false; btn.innerHTML = '<span>🔄</span><span>Refresh</span>'; }
+            }
+        }
+
+        function renderStudentProfileDashboard() {
+            if(!hasValidStudentSession()) return;
+            const c = currentStudentSession.candidate || {};
+            const stats = currentStudentSession.stats || {};
+            const history = Array.isArray(currentStudentSession.history) ? currentStudentSession.history : [];
+
+            const setText = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+            setText('profile-name', c.full_name || 'STUDENT');
+            setText('profile-reg', c.registration_no || '--');
+            setText('profile-meta', `${c.test_location || 'Bangladesh'} • ${c.nationality || 'Bangladesh'} • ${c.sex || 'Female'}`);
+            setText('profile-dob', `DOB: ${c.date_of_birth || '--'}`);
+
+            const profPhoto = document.getElementById('profile-photo');
+            if(profPhoto) {
+                profPhoto.src = c.photo_url || 'assets/default_avatar.svg';
+            }
+
+            const totalTests = Number(stats.total_tests ?? history.length ?? 0);
+            const passedTests = Number(stats.passed_tests ?? history.filter(h => h.is_passed).length ?? 0);
+            setText('profile-stat-total', totalTests);
+            setText('profile-stat-passed', passedTests);
+            setText('profile-stat-best', (stats.best_score !== null && stats.best_score !== undefined) ? `${stats.best_score}` : '--');
+            setText('profile-stat-avg', (stats.average_score !== null && stats.average_score !== undefined) ? `${stats.average_score}` : '--');
+            setText('profile-history-count-badge', `${totalTests} Completed`);
+
+            const pendingBanner = document.getElementById('profile-pending-exam-banner');
+            if(pendingBanner) {
+                pendingBanner.classList.toggle('hidden', !pendingExamLaunch);
+            }
+
+            const histContainer = document.getElementById('profile-history-list');
+            if(!histContainer) return;
+
+            if(history.length === 0) {
+                histContainer.innerHTML = `
+                    <div class="bg-black/30 border border-white/10 rounded-2xl p-6 text-center space-y-2">
+                        <div class="text-2xl">📝</div>
+                        <div class="text-sm font-bold text-gray-200">No completed tests recorded yet</div>
+                        <p class="text-xs text-gray-400">Launch a Prometric CBT Exam or PDF Model Test above — your scores and attempt history will appear here automatically.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            histContainer.innerHTML = history.map(item => {
+                const isCbt = item.exam_type === 'cbt';
+                const badgeCls = isCbt
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30'
+                    : 'bg-purple-500/20 text-purple-300 border-purple-400/30';
+                const passCls = item.is_passed
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-400/40';
+                const dateStr = item.completed_at
+                    ? new Date(item.completed_at).toLocaleString()
+                    : '';
+                return `
+                    <div class="bg-black/30 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${badgeCls}">
+                                    ${isCbt ? '🖥️ CBT Exam' : '📄 Model Test'}
+                                </span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${passCls}">
+                                    ${item.is_passed ? '✅ PASSED (合格)' : '❌ BELOW PASS MARK'}
+                                </span>
+                                <span class="text-[11px] text-gray-400 font-mono">${escapeHtml(dateStr)}</span>
+                            </div>
+                            <div class="text-sm font-bold text-white truncate">${escapeHtml(item.exam_title || 'JFT-Basic Exam')}</div>
+                        </div>
+                        <div class="flex items-center gap-4 flex-shrink-0">
+                            <div class="text-right">
+                                <div class="text-[10px] text-gray-400 uppercase font-bold">Correct</div>
+                                <div class="text-xs font-bold text-gray-200">${Number(item.total_correct || 0)} / ${Number(item.total_questions || 0)}</div>
+                            </div>
+                            <div class="text-right bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+                                <div class="text-[10px] text-cyan-300 uppercase font-bold">Scaled Score</div>
+                                <div class="text-base font-black text-white">${Number(item.scaled_score || 0)} <span class="text-xs text-gray-400 font-normal">/ ${Number(item.max_score || 250)}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function resumePendingExamFromProfile() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in first.');
+                return;
+            }
+            if(!pendingExamLaunch) {
+                openPortalChoiceFromProfile('cbt');
+                return;
+            }
+            const target = pendingExamLaunch;
+            pendingExamLaunch = null;
+            if(target.type === 'cbt') selectCbtExam(target.id);
+            else if(target.type === 'model') openExam(target.group, target.idx);
+        }
+
+        function openPortalChoiceFromProfile(mode) {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in to access exam portals.');
+                return;
+            }
+            document.getElementById('student-profile-sec')?.classList.add('hidden');
+            if(mode === 'cbt') {
+                openCbtSelection();
+            } else if(mode === 'model') {
+                openModelTestSelection();
+            } else {
+                document.getElementById('portal-choice-sec')?.classList.remove('hidden');
+            }
+        }
+
+        async function recordStudentTestCompletionToSupabase(details) {
+            if(!hasValidStudentSession()) return null;
+            const sb = getSupabaseClient();
+            if(!sb) return null;
+            try {
+                const { data, error } = await sb.rpc('record_student_test_attempt', {
+                    p_session_token: currentStudentSession.token,
+                    p_exam_type: details.examType || 'cbt',
+                    p_exam_id: details.examId ? String(details.examId) : '',
+                    p_exam_title: details.examTitle || 'JFT-Basic Exam',
+                    p_scaled_score: Number(details.scaledScore || 0),
+                    p_max_score: Number(details.maxScore || 250),
+                    p_pass_mark: Number(details.passMark || 200),
+                    p_is_passed: Boolean(details.isPassed),
+                    p_total_correct: Number(details.totalCorrect || 0),
+                    p_total_questions: Number(details.totalQuestions || 0),
+                    p_section_breakdown: details.secStats || {}
+                });
+                if(!error && data && data.ok) {
+                    applyAuthenticatedStudentSession(currentStudentSession.token, currentStudentSession.expiresAt, data);
+                    return data;
+                }
+            } catch(e) {
+                console.warn('Could not record student attempt to Supabase:', e);
+            }
+            return null;
         }
 
         async function submitCandidateRegistrationToSupabase(profile) {
@@ -3632,12 +4374,6 @@
                     .from(SUPABASE_CONFIG.candidatePhotosBucket)
                     .getPublicUrl(uploadData.path);
                 publicPhotoUrl = pubData?.publicUrl || null;
-
-                if(publicPhotoUrl) {
-                    const resPhoto = document.getElementById('res-photo');
-                    if(resPhoto) resPhoto.src = publicPhotoUrl;
-                    saveCandidateProfile(publicPhotoUrl);
-                }
             }
 
             const recordPayload = {
@@ -3655,6 +4391,10 @@
                 .insert([recordPayload]);
 
             if(insertError) {
+                const msg = String(insertError.message || '');
+                if(insertError.code === '23505' || msg.toLowerCase().includes('duplicate key') || msg.toLowerCase().includes('idx_candidate_registrations_reg_unique')) {
+                    throw new Error(`Registration Number "${profile.reg}" is already registered. Please log in instead.`);
+                }
                 throw new Error(`Supabase database insert failed: ${insertError.message}`);
             }
 
@@ -3683,42 +4423,26 @@
         }
 
         function hasValidCandidateProfile() {
-            const curName = (document.getElementById('s-name')?.value || "").trim();
-            const curReg = (document.getElementById('s-reg')?.value || "").trim();
-            if(curName && curName.toLowerCase() !== 'candidate' && curReg) return true;
-            const prof = loadCandidateProfile();
-            if(prof && prof.name && prof.name.toLowerCase() !== 'candidate' && prof.reg) return true;
-            return false;
+            return hasValidStudentSession();
         }
 
         function promptCandidateRegistration(pending) {
-            if(pending) pendingExamLaunch = pending;
-            navigateTo('login');
-            const hint = document.getElementById('login-pending-hint');
-            if(hint) {
-                hint.innerHTML = `<span>📋</span> JFT সার্টিফিকেটের জন্য প্রথমে আপনার পরীক্ষার্থী তথ্য দিয়ে রেজিস্ট্রেশন সম্পন্ন করুন।`;
-                hint.classList.remove('hidden');
-            }
-            const nameInput = document.getElementById('s-name');
-            if(nameInput) {
-                nameInput.focus();
-                nameInput.classList.add('ring-2', 'ring-cyan-400');
-            }
+            promptStudentLogin('🔒 Please log in using your Registered Name and Registration Number to access this exam. New students can register first.', pending);
         }
 
         let pendingExamLaunch = null;
 
         function launchCbtFromCard(examId) {
-            if(!hasValidCandidateProfile()) {
-                promptCandidateRegistration({ type: 'cbt', id: examId });
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in using your Name and Registration Number to start this CBT exam.', { type: 'cbt', id: examId });
                 return;
             }
             selectCbtExam(examId);
         }
 
         function launchModelFromCard(group, idx) {
-            if(!hasValidCandidateProfile()) {
-                promptCandidateRegistration({ type: 'model', group: group, idx: idx });
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in using your Name and Registration Number to start this Model Test.', { type: 'model', group: group, idx: idx });
                 return;
             }
             openExam(group, idx);
@@ -3837,7 +4561,7 @@
             }
         }
 
-        // --- NAVIGATION FLOW ---
+        // --- REGISTRATION SUBMIT & PROTECTED PORTAL FLOW ---
         let _candidateSubmitting = false;
         async function goToPortalChoice() {
             if(_candidateSubmitting) return;
@@ -3851,11 +4575,11 @@
             _candidateSubmitting = true;
             if(btn) {
                 btn.disabled = true;
-                btn.innerText = '⏳ Saving to Supabase...';
+                btn.innerText = '⏳ Saving Registration...';
             }
             if(statusEl) {
                 statusEl.className = 'text-xs font-semibold p-2.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 text-cyan-200 text-left';
-                statusEl.innerText = '⏳ Uploading photo (if selected) & saving registration...';
+                statusEl.innerText = '⏳ Uploading photo (if selected) & registering your account...';
                 statusEl.classList.remove('hidden');
             }
 
@@ -3875,36 +4599,46 @@
                 _candidateSubmitting = false;
                 if(btn) {
                     btn.disabled = false;
-                    btn.innerHTML = 'REGISTER &amp; START EXAM →';
+                    btn.innerHTML = 'REGISTER ACCOUNT →';
                 }
             }
 
-            document.getElementById('login-sec').classList.add('hidden');
+            // Reset registration inputs without creating an unauthenticated session,
+            // then route to the dedicated Login screen so the student logs in properly.
+            const regForm = document.getElementById('candidate-reg-form');
+            if(regForm) regForm.reset();
+            const photoEl = document.getElementById('res-photo');
+            if(photoEl && !hasValidStudentSession()) photoEl.src = 'assets/default_avatar.svg';
             const hint = document.getElementById('login-pending-hint');
             if(hint) hint.classList.add('hidden');
 
-            if(pendingExamLaunch) {
-                const target = pendingExamLaunch;
-                pendingExamLaunch = null;
-                if(target.type === 'cbt') {
-                    selectCbtExam(target.id);
-                    return;
-                } else if(target.type === 'model') {
-                    openExam(target.group, target.idx);
-                    return;
-                }
-            }
+            const loginNameInput = document.getElementById('login-name');
+            if(loginNameInput) loginNameInput.value = profile.name;
+            const loginRegInput = document.getElementById('login-reg');
+            if(loginRegInput) loginRegInput.value = '';
 
-            document.getElementById('portal-choice-sec').classList.remove('hidden');
+            promptStudentLogin(
+                `✅ Registration complete for <b>${escapeHtml(profile.name)}</b>! Please log in below with your Name and Registration Number.`,
+                pendingExamLaunch,
+                'success'
+            );
         }
 
         function backToPortalChoice() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in to access exam portals.');
+                return;
+            }
             document.getElementById('cbt-selection-sec').classList.add('hidden');
             document.getElementById('selection-sec').classList.add('hidden');
             document.getElementById('portal-choice-sec').classList.remove('hidden');
         }
 
         function openCbtSelection() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in to access CBT exams.');
+                return;
+            }
             document.getElementById('portal-choice-sec').classList.add('hidden');
             document.getElementById('cbt-selection-sec').classList.remove('hidden');
             renderStudentCbtList();
@@ -3916,6 +4650,10 @@
         }
 
         function openModelTestSelection() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in to access Model Tests.');
+                return;
+            }
             document.getElementById('portal-choice-sec').classList.add('hidden');
             document.getElementById('selection-sec').classList.remove('hidden');
         }
@@ -4754,6 +5492,10 @@
         }
 
         function launchCbtExam() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in first to launch this CBT exam.');
+                return;
+            }
             if(!activeCbtExam) {
                 if((allCbtExams || []).length > 0) activeCbtExam = allCbtExams[0];
                 else {
@@ -4793,7 +5535,7 @@
 
             const candName = document.getElementById('cbt-candidate-name');
             const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
-            const sNameVal = document.getElementById('s-name')?.value?.trim() || prof.name;
+            const sNameVal = prof.name || document.getElementById('s-name')?.value?.trim();
             if(candName) candName.innerText = sNameVal || "CANDIDATE";
 
             renderCbtQuestion();
@@ -4898,6 +5640,10 @@
         }
 
         function tryRestoreCbtSession() {
+            if(!hasValidStudentSession()) {
+                clearCbtSession(true);
+                return false;
+            }
             try {
                 const raw = localStorage.getItem(CBT_SESSION_KEY) || sessionStorage.getItem(CBT_SESSION_KEY);
                 if(!raw) return false;
@@ -5714,13 +6460,13 @@
             const passMark = data.passMark || 200;
             const isPassed = scaled >= passMark && scaled > 0;
             const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
-            const name = (document.getElementById('s-name')?.value || "").trim() || prof.name || "FATEMA ISLAM LIPY";
-            const reg = (document.getElementById('s-reg')?.value || "").trim() || prof.reg || "40019402";
-            const nat = (document.getElementById('s-nat')?.value || "").trim() || prof.nat || "Bangladesh";
-            const rawDob = document.getElementById('s-dob')?.value || prof.dob || "2005-12-12";
+            const name = prof.name || (document.getElementById('s-name')?.value || "").trim() || "CANDIDATE";
+            const reg = prof.reg || (document.getElementById('s-reg')?.value || "").trim() || "--";
+            const nat = prof.nat || (document.getElementById('s-nat')?.value || "").trim() || "Bangladesh";
+            const rawDob = prof.dob || document.getElementById('s-dob')?.value || "2005-12-12";
             const dobFormatted = rawDob ? rawDob.replace(/-/g, '/') : "2005/12/12";
-            const sex = document.getElementById('s-sex')?.value || prof.sex || "Female";
-            const loc = (document.getElementById('s-loc')?.value || "").trim() || prof.loc || "Bangladesh";
+            const sex = prof.sex || document.getElementById('s-sex')?.value || "Female";
+            const loc = prof.loc || (document.getElementById('s-loc')?.value || "").trim() || "Bangladesh";
             
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -5938,11 +6684,11 @@
 
                 const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
                 const subPayload = {
-                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || prof.reg || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
-                    full_name: (document.getElementById('s-name')?.value || "").trim() || prof.name || "Candidate",
+                    candidate_id: prof.reg || (document.getElementById('s-reg')?.value || "").trim() || ("JFT-" + Math.floor(1000 + Math.random()*9000)),
+                    full_name: prof.name || (document.getElementById('s-name')?.value || "").trim() || "Candidate",
                     password: "password",
-                    dob: document.getElementById('s-dob')?.value || prof.dob || "",
-                    location: document.getElementById('s-loc')?.value || prof.loc || "",
+                    dob: prof.dob || document.getElementById('s-dob')?.value || "",
+                    location: prof.loc || document.getElementById('s-loc')?.value || "",
                     examTitle: activeCbtExam ? activeCbtExam.title : "JFT-Basic CBT Exam",
                     total_questions: cbtQuestions.length,
                     totalScore: scaled,
@@ -5953,6 +6699,19 @@
                     questions: submissionQuestions,
                     date: new Date().toLocaleString()
                 };
+
+                await recordStudentTestCompletionToSupabase({
+                    examType: 'cbt',
+                    examId: activeCbtExam ? activeCbtExam.id : '',
+                    examTitle: activeCbtExam ? activeCbtExam.title : "JFT-Basic CBT Exam",
+                    scaledScore: scaled,
+                    maxScore: 250,
+                    passMark: passMarkVal,
+                    isPassed: isPassed,
+                    totalCorrect: totalCorrect,
+                    totalQuestions: cbtQuestions.length,
+                    secStats: secStats
+                });
 
                 const subRes = await fetch(`${API_BASE}/api/submit-exam`, {
                     method: 'POST',
@@ -6524,7 +7283,37 @@
         }
 
         // --- RESULT SCREEN NAVIGATION & RETEST LOGIC ---
+        function returnToProfileFromResult() {
+            const resEl = document.getElementById('result-ui');
+            if(resEl) resEl.classList.add('hidden');
+
+            clearCbtSession();
+            clearModelSession();
+
+            if(cbtTimerInterval) {
+                clearInterval(cbtTimerInterval);
+                cbtTimerInterval = null;
+            }
+            if(timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            activeCbtExam = null;
+            cbtQuestions = [];
+            cbtAnswers = {};
+            cbtFlags = {};
+            cbtAudioPlays = {};
+
+            navigateTo('profile');
+        }
+
         function returnToCbtSelectionFromResult() {
+            if(!hasValidStudentSession()) {
+                returnToHomeFromResult();
+                promptStudentLogin('🔒 Please log in to access CBT test selection.');
+                return;
+            }
             // Hide result certificate screen
             const resEl = document.getElementById('result-ui');
             if(resEl) resEl.classList.add('hidden');
@@ -6901,6 +7690,10 @@
         }
 
         function tryRestoreModelSession() {
+            if(!hasValidStudentSession()) {
+                clearModelSession();
+                return false;
+            }
             try {
                 const raw = localStorage.getItem(MODEL_SESSION_KEY);
                 if(!raw) return false;
@@ -6943,6 +7736,10 @@
         }
 
         function startExam() {
+            if(!hasValidStudentSession()) {
+                promptStudentLogin('🔒 Please log in first to start this Model Test.');
+                return;
+            }
             const hideIds = [
                 'view-home', 'view-mock', 'view-about', 'view-courses',
                 'login-sec', 'portal-choice-sec', 'cbt-selection-sec',
@@ -6955,7 +7752,7 @@
             });
             document.getElementById('exam-ui').classList.remove('hidden');
             const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
-            const candName = (document.getElementById('s-name')?.value || prof.name || "Candidate").trim();
+            const candName = (prof.name || document.getElementById('s-name')?.value || "Candidate").trim();
             document.getElementById('user-display').innerText = "CANDIDATE: " + candName;
             
             const pdfFile = document.getElementById('pdf-input')?.files?.[0];
@@ -7028,7 +7825,7 @@
             }, 1000);
         }
 
-        function finishExam() {
+        async function finishExam() {
             clearModelSession();
             let grandTotal = 0, userScore = 0;
             let totalCorrect = 0, totalQuestions = 0;
@@ -7119,11 +7916,11 @@
 
                 const prof = (typeof loadCandidateProfile === 'function' ? loadCandidateProfile() : null) || {};
                 const subPayload = {
-                    candidate_id: (document.getElementById('s-reg')?.value || "").trim() || prof.reg || ("MOD-" + Math.floor(1000 + Math.random()*9000)),
-                    full_name: (document.getElementById('s-name')?.value || "").trim() || prof.name || "Candidate",
+                    candidate_id: prof.reg || (document.getElementById('s-reg')?.value || "").trim() || ("MOD-" + Math.floor(1000 + Math.random()*9000)),
+                    full_name: prof.name || (document.getElementById('s-name')?.value || "").trim() || "Candidate",
                     password: "password",
-                    dob: document.getElementById('s-dob')?.value || prof.dob || "",
-                    location: document.getElementById('s-loc')?.value || prof.loc || "",
+                    dob: prof.dob || document.getElementById('s-dob')?.value || "",
+                    location: prof.loc || document.getElementById('s-loc')?.value || "",
                     examTitle: document.getElementById('confirm-model-name')?.innerText || "PDF Model Test",
                     total_questions: modelSubmissionQuestions.length,
                     totalScore: scaled,
@@ -7133,6 +7930,19 @@
                     questions: modelSubmissionQuestions,
                     date: new Date().toLocaleString()
                 };
+
+                await recordStudentTestCompletionToSupabase({
+                    examType: 'model',
+                    examId: '',
+                    examTitle: document.getElementById('confirm-model-name')?.innerText || "PDF Model Test",
+                    scaledScore: scaled,
+                    maxScore: 250,
+                    passMark: passMarkVal,
+                    isPassed: isPassed,
+                    totalCorrect: totalCorrect,
+                    totalQuestions: totalQuestions,
+                    secStats: secStats
+                });
 
                 fetch(`${API_BASE}/api/submit-exam`, {
                     method: 'POST',
