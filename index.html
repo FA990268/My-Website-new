@@ -854,8 +854,7 @@
     <section id="login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24 pb-12">
         <div class="glass-panel p-6 sm:p-8 w-full max-w-lg text-center">
             <div class="inline-block bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold mb-4">DAI ICHI ACADEMY KHULNA • CBT CENTER</div>
-            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">CANDIDATE REGISTRATION (পরীক্ষার্থী নিবন্ধন)</h2>
-            <p class="text-xs text-gray-300 mb-4">JFT সার্টিফিকেট ও অনলাইন পরীক্ষার জন্য আপনার সঠিক তথ্য দিয়ে নিবন্ধন করুন</p>
+            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">REGISTRATION</h2>
             <div id="login-pending-hint" class="hidden bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 p-3 rounded-xl text-xs font-bold mb-4 flex items-center justify-center gap-2"></div>
             <form id="candidate-reg-form" onsubmit="event.preventDefault(); goToPortalChoice();" class="space-y-4">
                 <div class="text-left">
@@ -912,13 +911,7 @@
     <!-- DEDICATED STUDENT LOGIN SECTION -->
     <section id="student-login-sec" class="hidden min-h-screen flex items-center justify-center p-4 pt-24 pb-12">
         <div class="glass-panel p-6 sm:p-8 w-full max-w-md text-center border border-white/20 shadow-2xl">
-            <div class="inline-block bg-cyan-500/20 text-cyan-300 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-cyan-400/30">
-                STUDENT PORTAL • LOGIN
-            </div>
-            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">STUDENT LOGIN</h2>
-            <p class="text-xs text-gray-300 mb-5">
-                Log in using your Registered Name and Registration Number to access your profile dashboard, test history, and CBT exams.
-            </p>
+            <h2 class="text-2xl sm:text-3xl font-black mb-2 italic tracking-wide">LOGIN</h2>
             <div id="student-login-info" class="hidden text-xs font-semibold p-3 rounded-xl border text-left mb-4"></div>
             <form id="student-login-form" onsubmit="event.preventDefault(); handleStudentLogin();" class="space-y-4">
                 <div class="text-left">
@@ -940,7 +933,7 @@
                 </div>
                 <div id="student-login-status" class="hidden text-xs font-semibold p-2.5 rounded-xl border text-left"></div>
                 <button id="btn-student-login" type="submit" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white py-3.5 rounded-2xl font-black text-base transition shadow-lg shadow-cyan-500/25 disabled:opacity-60 disabled:cursor-not-allowed">
-                    LOG IN TO DASHBOARD →
+                    LOG IN →
                 </button>
             </form>
             <div class="mt-5 pt-4 border-t border-white/10 space-y-2.5 text-xs">
@@ -4199,7 +4192,7 @@
                 }
             } finally {
                 _studentLoggingIn = false;
-                if(btn) { btn.disabled = false; btn.innerHTML = 'LOG IN TO DASHBOARD →'; }
+                if(btn) { btn.disabled = false; btn.innerHTML = 'LOG IN →'; }
             }
         }
 
